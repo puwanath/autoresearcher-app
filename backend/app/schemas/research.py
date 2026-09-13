@@ -232,7 +232,7 @@ class ChannelAnalysis(BaseModel):
 class TargetSegment(BaseModel):
     segment: str
     needs: list[str] = Field(..., min_length=1)
-    brands_serving: list[str] = Field(..., description="brands from the data that target this segment; ['ไม่พบ'] if none")
+    brands_serving: list[str] = Field(..., description="brands targeting this segment; ['ไม่พบ'] if none")
     opportunity: str = Field(..., min_length=1, description="how the user's brand could win this segment")
 
 
