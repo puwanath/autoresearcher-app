@@ -30,7 +30,7 @@ export function ProgressSteps({ events, status }: { events: string[]; status: Ta
               <div className="flex items-center gap-2 sm:w-full">
                 <span
                   className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-[12px] font-semibold transition ${
-                    isDone ? "bg-ink text-white" : isActive ? "bg-accent text-white" : "bg-canvas text-ink-3"
+                    isDone ? "bg-ink text-white" : isActive ? "ai-dot text-white shadow-[0_0_0_4px_rgba(110,92,255,.15)]" : "bg-canvas text-ink-3"
                   }`}
                 >
                   {isDone ? (
@@ -51,6 +51,7 @@ export function ProgressSteps({ events, status }: { events: string[]; status: Ta
           );
         })}
       </ol>
+      {status === "running" && <div className="ai-thinking mt-5" aria-hidden />}
       {refining && status === "running" && (
         <p className="mt-4 rounded-xl bg-accent/5 px-4 py-2 text-[13px] text-accent">
           ข้อมูลยังน้อย — เอเจนต์กำลังขยายคำค้นหาและวนรอบใหม่

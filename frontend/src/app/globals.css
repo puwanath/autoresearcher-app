@@ -20,6 +20,17 @@
   --radius-2xl: 28px;
   --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
   --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  /* AI gradient — Apple Intelligence-style blue → violet → pink */
+  --color-ai-1: #0a84ff;
+  --color-ai-2: #6e5cff;
+  --color-ai-3: #ff2d92;
+  --color-ai-4: #ff9f0a;
+}
+
+:root {
+  --grad-ai: linear-gradient(135deg, #0a84ff 0%, #6e5cff 45%, #ff2d92 100%);
+  --grad-ai-soft: linear-gradient(135deg, rgba(10, 132, 255, 0.12), rgba(110, 92, 255, 0.12), rgba(255, 45, 146, 0.1));
+  --grad-ai-ring: conic-gradient(from 180deg, #0a84ff, #6e5cff, #ff2d92, #ff9f0a, #0a84ff);
 }
 
 html {
@@ -46,7 +57,79 @@ body {
     -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-[15px] font-medium text-white transition-all hover:bg-accent-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full px-5 py-2.5 text-[15px] font-medium text-white transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+    background: var(--grad-ai);
+    background-size: 200% 200%;
+    box-shadow: 0 6px 20px -6px rgba(110, 92, 255, 0.55);
+  }
+  .btn-primary:not(:disabled):hover {
+    background-position: 100% 50%;
+    box-shadow: 0 10px 28px -8px rgba(110, 92, 255, 0.7);
+  }
+  .ai-text {
+    background: var(--grad-ai);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .ai-text-animated {
+    background: linear-gradient(90deg, #0a84ff, #6e5cff, #ff2d92, #ff9f0a, #0a84ff);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: gradient-flow 8s linear infinite;
+  }
+  /* gradient hairline border via mask */
+  .ai-border {
+    position: relative;
+  }
+  .ai-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: var(--grad-ai);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  /* glowing halo around the search box while focused */
+  .ai-glow {
+    position: relative;
+  }
+  .ai-glow::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--grad-ai);
+    filter: blur(12px);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .ai-glow:focus-within::after {
+    opacity: 0.45;
+    animation: hue-cycle 6s linear infinite;   /* shift colours, never rotate the shape */
+  }
+  .ai-dot {
+    background: var(--grad-ai);
+  }
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f3 25%, #e4e4ea 37%, #f0f0f3 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+  .ai-thinking {
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, #0a84ff, #6e5cff, #ff2d92, transparent);
+    background-size: 200% 100%;
+    animation: thinking 1.8s linear infinite;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-[15px] font-medium text-ink transition-all hover:bg-canvas active:scale-[0.98];
@@ -73,6 +156,66 @@ body {
 .fade-up-1 { animation-delay: 0.05s; }
 .fade-up-2 { animation-delay: 0.12s; }
 .fade-up-3 { animation-delay: 0.2s; }
+
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+@keyframes hue-cycle {
+  to { filter: blur(12px) hue-rotate(360deg); }
+}
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+@keyframes thinking {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, -40px) scale(1.15); }
+}
+@keyframes drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-70px, 30px) scale(1.1); }
+}
+@keyframes drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, 50px) scale(0.9); }
+}
+
+/* aurora backdrop for the hero — three blurred blobs drifting slowly */
+.aurora {
+  position: absolute;
+  top: -48px;               /* tuck under the nav bar */
+  bottom: 0;
+  left: 50%;
+  width: 100vw;             /* break out of the max-width container */
+  margin-left: -50vw;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+.aurora span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.32;
+  will-change: transform;
+}
+.aurora .b1 { width: 640px; height: 640px; left: 12%; top: -220px; background: #0a84ff; animation: drift-1 16s ease-in-out infinite; }
+.aurora .b2 { width: 560px; height: 560px; right: 10%; top: -180px; background: #8a6bff; animation: drift-2 19s ease-in-out infinite; }
+.aurora .b3 { width: 420px; height: 420px; left: 44%; top: 40px; background: #ff7ab8; opacity: 0.22; animation: drift-3 22s ease-in-out infinite; }
+.aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(245, 245, 247, 0) 0%, rgba(245, 245, 247, 0.6) 55%, #f5f5f7 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora span, .ai-text-animated, .ai-glow:focus-within::after, .ai-thinking { animation: none; }
+}
 
 @keyframes pulse-dot {
   0%, 100% { transform: scale(1); opacity: 1; }

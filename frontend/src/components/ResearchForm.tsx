@@ -57,7 +57,7 @@ export function ResearchForm() {
 
   return (
     <div className="card fade-up fade-up-1 mx-auto max-w-3xl p-3 sm:p-4" style={{ boxShadow: "var(--shadow-float)" }}>
-      <div className="flex items-center gap-3 rounded-2xl bg-canvas px-4 py-2">
+      <div className="ai-glow flex items-center gap-3 rounded-2xl bg-canvas px-4 py-2 transition focus-within:bg-surface">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0 text-ink-3">
           <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.8" />
           <path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

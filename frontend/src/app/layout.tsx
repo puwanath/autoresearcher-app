@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav className="mx-auto flex h-12 max-w-6xl items-center justify-between px-6">
             <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
               <Image src="/logo.svg" alt="" width={24} height={24} priority className="rounded-[6px]" />
-              <span>Auto<span className="text-accent">Research</span></span>
+              <span>Auto<span className="ai-text">Research</span></span>
             </Link>
             <div className="flex items-center gap-6 text-[13px] text-ink-2">
               <Link href="/" className="hover:text-ink">วิจัยใหม่</Link>

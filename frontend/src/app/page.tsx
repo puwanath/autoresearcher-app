@@ -5,11 +5,18 @@ import { TaskList } from "@/components/TaskList";
 export default function Home() {
   return (
     <>
-      <section className="pt-20 pb-14 text-center sm:pt-28">
-        <Image src="/logo.svg" alt="AutoResearch" width={72} height={72} priority className="fade-up mx-auto mb-6 rounded-[16px] shadow-[var(--shadow-float)]" />
+      <section className="relative pt-20 pb-14 text-center sm:pt-28">
+        <div className="aurora" aria-hidden>
+          <span className="b1" />
+          <span className="b2" />
+          <span className="b3" />
+        </div>
+        <div className="fade-up mx-auto mb-6 w-fit rounded-[20px] p-[3px]" style={{ background: "var(--grad-ai)", boxShadow: "0 12px 40px -10px rgba(110,92,255,.6)" }}>
+          <Image src="/logo.svg" alt="AutoResearch" width={72} height={72} priority className="block rounded-[17px]" />
+        </div>
         <p className="eyebrow fade-up">AutoResearch Agent</p>
         <h1 className="fade-up mt-3 text-[40px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[56px]">
-          วิจัยคู่แข่ง<span className="text-ink-3">.</span> อัตโนมัติ<span className="text-ink-3">.</span>
+          วิจัยคู่แข่ง<span className="text-ink-3">.</span> <span className="ai-text-animated">อัตโนมัติ</span><span className="text-ink-3">.</span>
         </h1>
         <p className="fade-up fade-up-1 mx-auto mt-5 max-w-xl text-[19px] leading-relaxed text-ink-2">
           พิมพ์สินค้าหรือคู่แข่ง แล้วปล่อยให้เอเจนต์ค้นหา ดึงราคา วิเคราะห์ตลาด

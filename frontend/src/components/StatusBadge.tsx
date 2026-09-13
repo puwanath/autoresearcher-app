@@ -2,7 +2,7 @@ import type { TaskStatus } from "@/lib/api";
 
 const STYLE: Record<TaskStatus, { label: string; cls: string; dot: string }> = {
   pending: { label: "รอคิว", cls: "bg-canvas text-ink-2", dot: "bg-ink-3" },
-  running: { label: "กำลังวิจัย", cls: "bg-accent/10 text-accent", dot: "bg-accent pulse-dot" },
+  running: { label: "กำลังวิจัย", cls: "ai-border bg-surface text-ink", dot: "ai-dot pulse-dot" },
   completed: { label: "เสร็จสิ้น", cls: "bg-success/10 text-[#1f8f3f]", dot: "bg-success" },
   failed: { label: "ล้มเหลว", cls: "bg-danger/10 text-danger", dot: "bg-danger" },
 };

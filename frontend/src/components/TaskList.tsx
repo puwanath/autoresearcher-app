@@ -35,7 +35,7 @@ export function TaskList() {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="card h-32 animate-pulse" />
+          <div key={i} className="card shimmer h-32" />
         ))}
       </div>
     );

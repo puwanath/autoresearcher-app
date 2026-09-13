@@ -62,8 +62,8 @@ export function ResearchDetail({ id }: { id: string }) {
   if (!task)
     return (
       <div className="mt-16 space-y-4">
-        <div className="card h-24 animate-pulse" />
-        <div className="card h-40 animate-pulse" />
+        <div className="card shimmer h-24" />
+        <div className="card shimmer h-40" />
       </div>
     );
 
@@ -133,7 +133,7 @@ export function ResearchDetail({ id }: { id: string }) {
 
       {running && (
         <p className="text-center text-[14px] text-ink-3">
-          โดยทั่วไปใช้เวลา 1–3 นาที หน้านี้จะอัปเดตอัตโนมัติ
+          <span className="ai-text-animated font-medium">AI กำลังทำงาน</span> · โดยทั่วไปใช้เวลา 1–3 นาที หน้านี้จะอัปเดตอัตโนมัติ
         </p>
       )}
 
@@ -143,7 +143,7 @@ export function ResearchDetail({ id }: { id: string }) {
           <div className="fade-up grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile label="ราคามัธยฐานตลาด" value={thb(s?.median)} sub={s?.sample_size ? `จาก ${s.sample_size} รายการที่มีราคา` : "ไม่พบราคา"} />
             <StatTile label="ช่วงราคา" value={s?.min != null ? `${thb(s.min)} – ${thb(s.max)}` : "—"} sub="ต่ำสุด – สูงสุด" />
-            <StatTile label="ช่วงราคาที่แนะนำ" value={a.recommended_price_range_thb || "—"} sub="THB" />
+            <StatTile label="ช่วงราคาที่แนะนำ" value={a.recommended_price_range_thb || "—"} sub="AI แนะนำ · THB" accent />
             <StatTile label="ความเชื่อมั่น" value={CONF[a.confidence]} sub={`${task.products.length} สินค้า · ${task.events.length ? duration(task.created_at, task.finished_at) : ""}`} />
           </div>
 

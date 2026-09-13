@@ -33,6 +33,16 @@ export function PriceChart({ products, highlight }: { products: Product[]; highl
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+            <defs>
+              <linearGradient id="barAi" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#6e5cff" />
+                <stop offset="100%" stopColor="#0a84ff" />
+              </linearGradient>
+              <linearGradient id="barInk" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3a3a3c" />
+                <stop offset="100%" stopColor="#1d1d1f" />
+              </linearGradient>
+            </defs>
             <CartesianGrid vertical={false} stroke="#e8e8ed" />
             <XAxis dataKey="brand" tick={{ fontSize: 11, fill: "#86868b" }} axisLine={false} tickLine={false} interval={0} angle={-25} textAnchor="end" height={54} />
             <YAxis tick={{ fontSize: 11, fill: "#86868b" }} axisLine={false} tickLine={false} tickFormatter={(v) => `฿${v.toLocaleString()}`} width={64} />
@@ -47,7 +57,7 @@ export function PriceChart({ products, highlight }: { products: Product[]; highl
             <Bar dataKey="median" radius={[6, 6, 0, 0]} isAnimationActive={false}>
               {rows.map((r) => {
                 const target = hl.has(r.brand.toLowerCase());
-                return <Cell key={r.brand} fill={target ? "#0071e3" : "#1d1d1f"} opacity={hl.size && !target ? 0.35 : 1} />;
+                return <Cell key={r.brand} fill={target ? "url(#barAi)" : "url(#barInk)"} opacity={hl.size && !target ? 0.35 : 1} />;
               })}
             </Bar>
           </BarChart>

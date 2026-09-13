@@ -106,7 +106,10 @@ Tables are created by `init_db()` at startup — no Alembic yet; add migrations 
 
 **Frontend** — `frontend/src/`. Apple-style design system lives entirely in `app/globals.css`
 (Tailwind v4 `@theme` tokens: `ink`, `canvas`, `accent`, …; component classes `.card`, `.glass`,
-`.btn-primary`, `.field`). Pages: `/` (`ResearchForm` + polling `TaskList`), `/research/[id]`
+`.btn-primary`, `.field`). The "AI" layer is the `--grad-ai` blue→violet→pink gradient (`.ai-text`,
+`.ai-text-animated`, `.ai-border`, `.ai-glow`, `.ai-dot`, `.ai-thinking`, `.shimmer`) plus the `.aurora`
+hero backdrop (full-viewport via `left:50%; width:100vw; margin-left:-50vw`). Never animate `rotate` on a
+non-square glow element — it renders as diagonal streaks; cycle `hue-rotate` instead. Pages: `/` (`ResearchForm` + polling `TaskList`), `/research/[id]`
 (`ResearchDetail`, a client component that polls `GET /research/{id}` every 2.5 s while pending/running).
 `lib/api.ts` holds the TypeScript mirror of the backend Pydantic models — update both when a schema changes.
 `ProgressSteps` derives stage state from the `events` strings (`"[hh:mm:ss] stage: msg"`, parsed by

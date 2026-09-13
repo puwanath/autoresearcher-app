@@ -146,6 +146,17 @@ class PageExtraction(BaseModel):
 
 # ---------- Stage 4: Analysis ----------
 
+_RANGE_RE = re.compile(r"\s*([\d,]+(?:\.\d+)?)\s*[-–]\s*([\d,]+(?:\.\d+)?)\s*(?:บาท|THB)?\s*")
+
+
+def pretty_thb_range(v: str) -> str:
+    """LLM sometimes emits raw floats ('60.0 - 2038.0'); render them as '฿60–2,038'."""
+    m = _RANGE_RE.fullmatch(v)
+    if not m:
+        return v
+    lo, hi = (float(x.replace(",", "")) for x in m.groups())
+    return f"฿{lo:,.0f}" if lo == hi else f"฿{lo:,.0f}–{hi:,.0f}"
+
 
 class PriceStats(BaseModel):
     currency: str = "THB"
@@ -169,15 +180,7 @@ class CompetitorAssessment(BaseModel):
     sentiment: Literal["positive", "neutral", "negative", "mixed", "unknown"] = "unknown"
     sentiment_note: str = ""
 
-    @field_validator("price_range_thb")
-    @classmethod
-    def _pretty_range(cls, v: str) -> str:
-        """LLM sometimes emits raw floats ('60.0 - 2038.0'); render them as '฿60–2,038'."""
-        m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(?:บาท|THB)?\s*", v)
-        if not m:
-            return v
-        lo, hi = (float(x) for x in m.groups())
-        return f"฿{lo:,.0f}" if lo == hi else f"฿{lo:,.0f}–{hi:,.0f}"
+    _pretty = field_validator("price_range_thb")(lambda v: pretty_thb_range(v))
 
 
 class SWOT(BaseModel):
@@ -195,7 +198,7 @@ class AnalysisReport(BaseModel):
     competition_type: Literal["price", "quality", "brand", "channel", "mixed"]
     competitors: list[CompetitorAssessment]
     pricing_insight: str
-    recommended_price_range_thb: str
+    recommended_price_range_thb: str = Field(..., description="human-readable THB range, e.g. '2,500–3,500 บาท'")
     channel_insight: str
     recommended_channels: list[str]
     sentiment_summary: str
@@ -204,6 +207,8 @@ class AnalysisReport(BaseModel):
     action_plan: list[str]
     data_gaps: list[str] = Field(default_factory=list)
     confidence: Literal["low", "medium", "high"] = "medium"
+
+    _pretty = field_validator("recommended_price_range_thb")(lambda v: pretty_thb_range(v))
 
 
 # ---------- Stage 5: Output ----------
