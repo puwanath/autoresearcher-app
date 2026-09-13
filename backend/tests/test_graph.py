@@ -8,7 +8,7 @@ from tests.conftest import FakeLLM, fake_fetch, fake_search
 @pytest.mark.asyncio
 async def test_full_loop_without_refine(settings):
     llm = FakeLLM(products_per_page=2)
-    deps = Deps(llm=llm, settings=settings, search=fake_search, fetch=fake_fetch)
+    deps = Deps(llm=llm, settings=settings, search=fake_search, fetch=fake_fetch, fetch_images=False)
     req = ResearchRequest(query="ครีมกันแดด https://brand.example.com/sun", output_formats=[OutputFormat.markdown])
 
     result = await run_research(req, "t1", deps)
@@ -28,7 +28,7 @@ async def test_full_loop_without_refine(settings):
 @pytest.mark.asyncio
 async def test_loop_refines_when_data_is_thin(settings):
     llm = FakeLLM(products_per_page=0)
-    deps = Deps(llm=llm, settings=settings, search=fake_search, fetch=fake_fetch)
+    deps = Deps(llm=llm, settings=settings, search=fake_search, fetch=fake_fetch, fetch_images=False)
     fetched: list[list[str]] = []
 
     async def counting_fetch(urls, task_id):
@@ -63,14 +63,14 @@ async def test_refine_with_no_new_queries_skips_to_analysis(settings):
         fetched.append(urls)
         return await fake_fetch(urls, task_id)
 
-    deps = Deps(llm=llm, settings=settings, search=fake_search, fetch=counting_fetch)
+    deps = Deps(llm=llm, settings=settings, search=fake_search, fetch=counting_fetch, fetch_images=False)
     result = await run_research(ResearchRequest(query="niche"), "t4", deps)
     assert llm.refine_calls == 1 and len(fetched) == 1 and result.analysis is not None
 
 
 @pytest.mark.asyncio
 async def test_pdf_artifact(settings):
-    deps = Deps(llm=FakeLLM(), settings=settings, search=fake_search, fetch=fake_fetch)
+    deps = Deps(llm=FakeLLM(), settings=settings, search=fake_search, fetch=fake_fetch, fetch_images=False)
     req = ResearchRequest(query="กาแฟดริป", output_formats=[OutputFormat.markdown, OutputFormat.pdf])
     result = await run_research(req, "t3", deps)
     formats = {a.format for a in result.artifacts}

@@ -7,6 +7,7 @@ from app.schemas.research import (
     AnalysisReport,
     CompetitorInfo,
     ExtractedProduct,
+    ImageAsset,
     PriceStats,
     ReportArtifact,
     ResearchPlan,
@@ -30,6 +31,7 @@ class ResearchState(TypedDict, total=False):
     analysis: AnalysisReport
     report_markdown: str
     artifacts: list[ReportArtifact]
+    images: list[ImageAsset]
     events: Annotated[list[str], operator.add]
     errors: Annotated[list[str], operator.add]
     # loop bookkeeping (underscore = not part of the public result)

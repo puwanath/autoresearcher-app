@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db import get_session, repo
 from app.db.models import PriceRecord, Result, Task, TaskStatus
 from app.schemas.research import OutputFormat, ResearchRequest
@@ -42,6 +43,8 @@ class TaskView(BaseModel):
     analysis: dict | None = None
     price_stats: dict | None = None
     products: list[dict] = []
+    images: list[dict] = []
+    charts: list[str] = []
     artifacts: dict[str, str] = {}
 
 
@@ -84,6 +87,10 @@ async def list_research(limit: int = Query(20, le=100), session: AsyncSession = 
     ]
 
 
+def _report_dir(task_id: str) -> Path:
+    return get_settings().reports_dir / task_id
+
+
 async def _task_view(session: AsyncSession, task_id: str) -> TaskView:
     task = await repo.get_task(session, task_id)
     if task is None:
@@ -102,6 +109,8 @@ async def _task_view(session: AsyncSession, task_id: str) -> TaskView:
         analysis=by_type["analysis"].content if "analysis" in by_type else None,
         price_stats=by_type["price_stats"].content if "price_stats" in by_type else None,
         products=(by_type["products"].content or {}).get("items", []) if "products" in by_type else [],
+        images=(by_type["images"].content or {}).get("items", []) if "images" in by_type else [],
+        charts=sorted(p.name for p in _report_dir(task.id).glob("chart-*.svg")),
         artifacts={k.removeprefix("report_"): r.raw_file_url for k, r in by_type.items() if k.startswith("report_")},
     )
 
@@ -121,3 +130,13 @@ async def download_report(
         raise HTTPException(404, f"no {format.value} report for this task (status={view.status})")
     media = "application/pdf" if format == OutputFormat.pdf else "text/markdown; charset=utf-8"
     return FileResponse(path, media_type=media, filename=Path(path).name)
+
+
+@router.get("/{task_id}/assets/{path:path}")
+async def report_asset(task_id: str, path: str):
+    """Serve chart SVGs and downloaded product images that belong to a report."""
+    base = _report_dir(task_id).resolve()
+    target = (base / path).resolve()
+    if not target.is_relative_to(base) or not target.is_file() or target.suffix not in {".svg", ".jpg", ".png"}:
+        raise HTTPException(404, "asset not found")
+    return FileResponse(target)

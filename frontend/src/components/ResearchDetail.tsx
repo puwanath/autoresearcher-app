@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, type TaskView } from "@/lib/api";
 import { duration, parseEvent, thb } from "@/lib/format";
-import { Bullets, CompetitorTable, ProductTable, Prose, Section, SwotGrid } from "./AnalysisSections";
+import { Bullets, CompetitorTable, ImageGallery, ProductTable, Prose, Section, SwotGrid } from "./AnalysisSections";
 import { PriceChart } from "./PriceChart";
 import { ProgressSteps } from "./ProgressSteps";
 import { StatTile } from "./StatTile";
@@ -127,6 +127,7 @@ export function ResearchDetail({ id }: { id: string }) {
                 <Prose text={a.market_overview} />
                 <p className="mt-3 text-[13px] text-ink-3">ลักษณะการแข่งขัน: <span className="text-ink">{a.competition_type}</span></p>
               </div>
+              <ImageGallery taskId={id} images={task.images} />
               <PriceChart products={task.products} highlight={targets} />
               <CompetitorTable rows={a.competitors} highlight={targets} />
             </div>

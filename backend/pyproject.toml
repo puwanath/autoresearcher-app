@@ -33,6 +33,7 @@ autoresearch = "app.cli:app"
 
 [dependency-groups]
 dev = [
+    "pypdf>=6.18.1",
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "ruff>=0.6",
@@ -54,5 +55,6 @@ line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
+per-file-ignores = { "app/reports/charts.py" = ["E501"], "app/reports/pdf.py" = ["E501"] }  # SVG/CSS strings read better on one line
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["B008"]  # FastAPI Depends()/Query() in defaults is idiomatic

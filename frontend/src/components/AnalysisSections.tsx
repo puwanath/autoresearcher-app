@@ -1,4 +1,4 @@
-import type { Analysis, CompetitorAssessment, Product } from "@/lib/api";
+import { api, type Analysis, type CompetitorAssessment, type ImageAsset, type Product } from "@/lib/api";
 import { thb } from "@/lib/format";
 
 const POS: Record<CompetitorAssessment["price_position"], string> = {
@@ -115,6 +115,37 @@ export function ProductTable({ products }: { products: Product[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+export function ImageGallery({ taskId, images }: { taskId: string; images: ImageAsset[] }) {
+  if (!images.length) return null;
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {images.map((im) => (
+        <a
+          key={im.image_id}
+          href={im.image_url}
+          target="_blank"
+          rel="noreferrer"
+          className="card group overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-float)]"
+        >
+          <div className="aspect-square bg-canvas p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- served by our own API, not optimisable */}
+            <img
+              src={api.assetUrl(taskId, im.local_file_path)}
+              alt={im.alt_text}
+              className="h-full w-full object-contain transition group-hover:scale-[1.03]"
+              loading="lazy"
+            />
+          </div>
+          <div className="px-3 py-2.5">
+            <p className="text-[12px] font-semibold">{im.brand_name ?? "—"}</p>
+            <p className="line-clamp-2 text-[12px] leading-snug text-ink-2">{im.product_name}</p>
+          </div>
+        </a>
+      ))}
     </div>
   );
 }

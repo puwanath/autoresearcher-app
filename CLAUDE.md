@@ -81,11 +81,18 @@ by the worker but never serialised to the API.
 
 **Reports** — `app/reports/markdown.py` renders `templates/report.md.j2` (fixed PRD §5.5 section order:
 Executive Summary → Competitor Landscape → Price & Promotion → Sales Channel → Strategic Recommendations/SWOT).
-`pdf.py` converts Markdown → HTML → PDF with WeasyPrint; the CSS font stack is
-`Sarabun, Noto Sans Thai, Loma, Garuda` — the Dockerfile installs `fonts-thai-tlwg`; on a bare host only
-`Loma` may exist. Single newlines in Markdown collapse, so multi-line metadata must be list items.
+`charts.py` writes dependency-free SVG bar charts (`chart-prices.svg`, `chart-channels.svg`) and `images.py`
+downloads ≤8 product images (`images/*.jpg`, one per brand, deduped by URL and pixel hash) into the report
+directory; the Markdown references both relatively so the `.md` stays readable and WeasyPrint resolves them
+via `base_url`. `pdf.py` converts Markdown → HTML → PDF: a `Cover` dataclass renders a full-bleed cover page
+(`@page cover`, no running header), a TOC is built from python-markdown `toc_tokens` with page numbers from
+CSS `target-counter(attr(href), page)` — keep it a `<table>`, `display:flex` on the links broke the counter.
+Font stack `Sarabun, Noto Sans Thai, Loma, Garuda` (must be set on `@page` too, margin boxes don't inherit);
+the Dockerfile installs `fonts-thai-tlwg`. Single newlines in Markdown collapse, so multi-line metadata
+must be list items. `app/agents/__init__.py` exports lazily because `reports` imports `agents.stats`.
 
-**Service** — `app/main.py` (FastAPI, `/api/v1/research` in `app/api/research.py`, `/health` probes vLLM),
+**Service** — `app/main.py` (FastAPI, `/api/v1/research` in `app/api/research.py`; `/research/{id}/assets/{path}` serves chart SVGs / images from the report
+directory; `/health` probes vLLM),
 `app/worker.py` (Celery task `research.run`, Redis broker, `acks_late`, 30-min hard limit),
 `app/db/models.py` (SQLAlchemy 2 async: `projects → tasks → results`, `competitors → products →
 price_records` (append-only price time series for Phase 2 history), `scraped_sources`), `app/db/repo.py`

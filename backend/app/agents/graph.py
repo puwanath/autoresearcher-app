@@ -26,7 +26,7 @@ from app.agents.state import ResearchState
 from app.agents.stats import brand_price_table, dedupe_competitors, dedupe_products, price_stats
 from app.config import Settings, get_settings
 from app.llm import LLMClient, get_llm
-from app.reports import render_markdown, render_pdf
+from app.reports import Cover, fetch_product_images, render_markdown, render_pdf, write_charts
 from app.schemas.research import (
     AnalysisReport,
     CompetitorInfo,
@@ -58,6 +58,7 @@ class Deps:
     on_event: Callable[[str, str], Awaitable[None]] | None = None  # (stage, message)
     search: Callable[..., Awaitable[list[SearchResult]]] = web_search
     fetch: Callable[..., Awaitable[list[ScrapedPage]]] = fetch_pages
+    fetch_images: bool = True  # tests turn this off (network)
 
 
 def _deps(config: RunnableConfig) -> Deps:
@@ -183,6 +184,7 @@ async def extract_node(state: ResearchState, config: RunnableConfig) -> dict:
             "page_url": page.final_url,
             "page_title": page.title,
             "json_ld": page.json_ld,
+            "image_urls": page.image_urls[:20],
             "page_text": page.text,
         }
         async with sem:
@@ -211,9 +213,11 @@ async def extract_node(state: ResearchState, config: RunnableConfig) -> dict:
         if not ext.is_relevant:
             continue
         relevant += 1
+        single_product_page = ext.page_type == "product" and len(ext.products) == 1
         for prod in ext.products:
             prod.data_source_url = prod.data_source_url or page.final_url
-            if not prod.image_urls and page.image_urls:
+            # page-level images (og:image etc.) only identify the product on a dedicated product page
+            if not prod.image_urls and page.image_urls and single_product_page:
                 prod.image_urls = page.image_urls[:3]
         products.extend(ext.products)
         competitors.extend(ext.competitors)
@@ -284,33 +288,68 @@ async def analyze_node(state: ResearchState, config: RunnableConfig) -> dict:
 
 async def write_node(state: ResearchState, config: RunnableConfig) -> dict:
     deps = _deps(config)
-    req = state["request"]
-    md = render_markdown(
-        request=req,
-        analysis=state["analysis"],
-        products=state["products"],
-        stats=state.get("price_stats"),
-        pages=state["pages"],
-    )
+    req, analysis, products = state["request"], state["analysis"], state["products"]
     out_dir = deps.settings.reports_dir / state["task_id"]
     out_dir.mkdir(parents=True, exist_ok=True)
+    errors: list[str] = []
+
+    # visuals are best-effort: a chart or image failure must never block the report
+    charts: dict[str, str] = {}
+    images = []
+    try:
+        charts = write_charts(products, req.target_competitors, out_dir)
+    except Exception as e:
+        log.exception("charts failed")
+        errors.append(f"charts: {e}")
+    if deps.fetch_images:
+        try:
+            images = await fetch_product_images(products, out_dir / "images")
+        except Exception as e:
+            log.exception("images failed")
+            errors.append(f"images: {e}")
+
+    md = render_markdown(
+        request=req,
+        analysis=analysis,
+        products=products,
+        stats=state.get("price_stats"),
+        pages=state["pages"],
+        charts=charts,
+        images=images,
+    )
     stem = slugify(req.query, max_length=40, allow_unicode=False) or "report"
     artifacts: list[ReportArtifact] = []
-    errors: list[str] = []
     md_path = out_dir / f"{stem}.md"
     md_path.write_text(md, encoding="utf-8")
     artifacts.append(ReportArtifact(format=OutputFormat.markdown, path=str(md_path), size_bytes=md_path.stat().st_size))
     if OutputFormat.pdf in req.output_formats:
+        stats = state.get("price_stats")
+        cover = Cover(
+            title=analysis.title,
+            subtitle=analysis.key_findings[0] if analysis.key_findings else "",
+            query=req.query,
+            competitors=req.target_competitors,
+            our_brand=req.our_brand,
+            confidence={"low": "ต่ำ", "medium": "ปานกลาง", "high": "สูง"}.get(analysis.confidence, analysis.confidence),
+            stats={
+                "แหล่งข้อมูล": f"{len([p for p in state['pages'] if p.ok])} หน้าเว็บ · {len(products)} รายการสินค้า",
+                "ราคามัธยฐานตลาด": f"฿{stats.median:,.0f}" if stats and stats.median else "ไม่พบข้อมูลราคา",
+            },
+        )
         try:
-            pdf_path = await asyncio.to_thread(render_pdf, md, out_dir / f"{stem}.pdf", state["analysis"].title)
+            pdf_path = await asyncio.to_thread(render_pdf, md, out_dir / f"{stem}.pdf", analysis.title, cover)
             artifacts.append(
                 ReportArtifact(format=OutputFormat.pdf, path=str(pdf_path), size_bytes=pdf_path.stat().st_size)
             )
         except Exception as e:
             log.exception("pdf failed")
             errors.append(f"pdf: {e}")
-    ev = await _emit(deps, "write", ", ".join(f"{a.format}={a.path}" for a in artifacts))
-    return {"report_markdown": md, "artifacts": artifacts, "events": [ev], "errors": errors}
+    ev = await _emit(
+        deps,
+        "write",
+        ", ".join(f"{a.format}={a.path}" for a in artifacts) + f" · {len(charts)} charts · {len(images)} images",
+    )
+    return {"report_markdown": md, "artifacts": artifacts, "images": images, "events": [ev], "errors": errors}
 
 
 # ---------------------------------------------------------------- graph
@@ -363,6 +402,7 @@ async def run_research(request: ResearchRequest, task_id: str, deps: Deps | None
         analysis=final.get("analysis"),
         report_markdown=final.get("report_markdown"),
         artifacts=final.get("artifacts", []),
+        images=final.get("images", []),
         events=final.get("events", []),
         errors=final.get("errors", []),
         pages=final.get("pages", []),

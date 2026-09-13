@@ -92,6 +92,17 @@ export interface Plan {
   rationale: string;
 }
 
+export interface ImageAsset {
+  image_id: string;
+  brand_name: string | null;
+  product_name: string;
+  image_url: string;
+  local_file_path: string;
+  alt_text: string;
+  width_px: number;
+  height_px: number;
+}
+
 export interface TaskView {
   task_id: string;
   status: TaskStatus;
@@ -104,6 +115,8 @@ export interface TaskView {
   analysis: Analysis | null;
   price_stats: PriceStats | null;
   products: Product[];
+  images: ImageAsset[];
+  charts: string[];
   artifacts: Partial<Record<OutputFormat, string>>;
 }
 
@@ -129,4 +142,5 @@ export const api = {
   list: (limit = 20) => http<TaskSummary[]>(`/research?limit=${limit}`),
   get: (id: string) => http<TaskView>(`/research/${id}`),
   reportUrl: (id: string, format: OutputFormat) => `${API_URL}/research/${id}/report?format=${format}`,
+  assetUrl: (id: string, path: string) => `${API_URL}/research/${id}/assets/${path}`,
 };

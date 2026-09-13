@@ -5,11 +5,13 @@ Field names follow the PRD §5 JSON schemas (Competitor Info / Product Price / I
 
 from __future__ import annotations
 
+import re
+import uuid
 from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class OutputFormat(StrEnum):
@@ -116,6 +118,22 @@ class CompetitorInfo(BaseModel):
     description: str | None = None
 
 
+class ImageAsset(BaseModel):
+    """PRD §5.3 — a downloaded product image used in the report."""
+
+    image_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    brand_name: str | None = None
+    product_name: str = ""
+    image_url: str
+    local_file_path: str = Field(..., description="relative to the report directory")
+    image_type: Literal["Product Photo", "Logo", "Screenshot", "Infographic"] = "Product Photo"
+    alt_text: str = ""
+    width_px: int = 0
+    height_px: int = 0
+    file_size_kb: int = 0
+    tags: list[str] = Field(default_factory=list)
+
+
 class PageExtraction(BaseModel):
     """What the LLM returns for one scraped page."""
 
@@ -150,6 +168,16 @@ class CompetitorAssessment(BaseModel):
     channels: list[str] = Field(..., min_length=1, description="use ['ไม่ทราบ'] if unknown")
     sentiment: Literal["positive", "neutral", "negative", "mixed", "unknown"] = "unknown"
     sentiment_note: str = ""
+
+    @field_validator("price_range_thb")
+    @classmethod
+    def _pretty_range(cls, v: str) -> str:
+        """LLM sometimes emits raw floats ('60.0 - 2038.0'); render them as '฿60–2,038'."""
+        m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(?:บาท|THB)?\s*", v)
+        if not m:
+            return v
+        lo, hi = (float(x) for x in m.groups())
+        return f"฿{lo:,.0f}" if lo == hi else f"฿{lo:,.0f}–{hi:,.0f}"
 
 
 class SWOT(BaseModel):
@@ -198,6 +226,7 @@ class ResearchResult(BaseModel):
     analysis: AnalysisReport | None = None
     report_markdown: str | None = None
     artifacts: list[ReportArtifact] = Field(default_factory=list)
+    images: list[ImageAsset] = Field(default_factory=list)
     events: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
     pages: list[ScrapedPage] = Field(default_factory=list, exclude=True)  # persisted, not serialised

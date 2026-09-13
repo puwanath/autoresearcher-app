@@ -133,6 +133,14 @@ async def save_result(session: AsyncSession, result: ResearchResult, pages: list
                 content={"items": [pr.model_dump(mode="json") for pr in result.products]},
             )
         )
+    if result.images:
+        session.add(
+            Result(
+                task_id=task.id,
+                data_type="images",
+                content={"items": [im.model_dump(mode="json") for im in result.images]},
+            )
+        )
     if result.price_stats:
         session.add(
             Result(task_id=task.id, data_type="price_stats", content=result.price_stats.model_dump(mode="json"))

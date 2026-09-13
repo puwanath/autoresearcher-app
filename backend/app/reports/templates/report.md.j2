@@ -21,7 +21,15 @@
 {{ a.market_overview }}
 
 **ลักษณะการแข่งขัน:** {{ a.competition_type }}
+{% if images %}
+### ตัวอย่างสินค้าของคู่แข่ง
 
+<table class="gallery">
+{% for row in images | batch(4) -%}
+<tr>{% for im in row %}<td><img src="{{ im.local_file_path }}" alt="{{ im.alt_text | e }}"><b>{{ im.brand_name or "" }}</b><br>{{ im.product_name | trunc(48) }}</td>{% endfor %}</tr>
+{% endfor -%}
+</table>
+{% endif %}
 | แบรนด์ | ตำแหน่งราคา | ช่วงราคา | จุดเด่น | จุดด้อย | ช่องทาง | Sentiment |
 |---|---|---|---|---|---|---|
 {% for c in a.competitors -%}
@@ -31,7 +39,13 @@
 ## ส่วนที่ 2: วิเคราะห์ราคาและโปรโมชั่น (Price & Promotion Analysis)
 
 {{ a.pricing_insight }}
+{% if charts.prices %}
+### กราฟเปรียบเทียบราคามัธยฐานตามแบรนด์
 
+![ราคามัธยฐานตามแบรนด์ (แถบสีเทาคือช่วงต่ำสุด–สูงสุด, สีน้ำเงินคือคู่แข่งเป้าหมาย)]({{ charts.prices }})
+
+*แถบสีเทา = ช่วงราคาต่ำสุด–สูงสุดของแบรนด์ · สีน้ำเงิน = คู่แข่งเป้าหมาย · หน่วย THB*
+{% endif %}
 **สรุปราคาตามแบรนด์**
 
 | แบรนด์ | จำนวนสินค้า | ราคาต่ำสุด | ราคามัธยฐาน | ราคาสูงสุด | โปรโมชั่น | คะแนนรีวิวเฉลี่ย |
@@ -51,7 +65,9 @@
 ## ส่วนที่ 3: ช่องทางการขาย (Sales Channel Strategy)
 
 {{ a.channel_insight }}
-
+{% if charts.channels %}
+![จำนวนรายการสินค้าที่พบในแต่ละช่องทาง]({{ charts.channels }})
+{% endif %}
 | ช่องทาง | จำนวนรายการที่พบ |
 |---|---:|
 {% for ch, n in channel_counts -%}

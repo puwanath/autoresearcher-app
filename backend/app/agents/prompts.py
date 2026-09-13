@@ -38,6 +38,8 @@ Rules:
 - sales_channels: the channel this page represents (Shopee, Lazada, Official Website, Watsons, ...),
   channel_url = page URL. availability from stock cues.
 - promotions: coupons, bundles, flash sales, free gifts.
+- image_urls: choose from the provided image_urls list only the images that clearly belong to that product
+  (file names / paths usually contain the product or brand name). Leave empty when unsure — never guess.
 - review_highlights: up to 5 short customer opinions or rating summaries if present.
 - competitors: brands appearing on the page with any descriptive info (segment, audience).
 - Prefer JSON-LD values over page text when they conflict. Never fabricate numbers.
