@@ -6,6 +6,7 @@ import asyncio
 import logging
 
 from celery import Celery
+from celery.signals import worker_process_init
 
 from app.config import get_settings
 
@@ -23,6 +24,29 @@ celery_app.conf.update(
     task_soft_time_limit=60 * 25,
     broker_connection_retry_on_startup=True,
 )
+
+
+_loop: asyncio.AbstractEventLoop | None = None
+
+
+@worker_process_init.connect
+def _init_process(**_kwargs) -> None:
+    """One event loop per prefork child. `asyncio.run()` per task would close the loop that the module-level
+    SQLAlchemy engine and OpenAI/httpx clients are bound to, breaking every task after the first."""
+    global _loop
+    _loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_loop)
+    from app.db import engine
+
+    engine.sync_engine.dispose(close=False)  # drop pool connections inherited from the parent process
+
+
+def _run_sync(coro):
+    global _loop
+    if _loop is None or _loop.is_closed():  # e.g. solo pool / tests, where the signal did not fire
+        _loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_loop)
+    return _loop.run_until_complete(coro)
 
 
 async def _run(task_id: str) -> dict:
@@ -56,4 +80,4 @@ async def _run(task_id: str) -> dict:
 
 @celery_app.task(name="research.run", bind=True, max_retries=0)
 def run_research_task(self, task_id: str) -> dict:
-    return asyncio.run(_run(task_id))
+    return _run_sync(_run(task_id))

@@ -38,6 +38,9 @@ npx tsc --noEmit && npm run lint          # typecheck + eslint (no frontend unit
 ```
 
 Real runs take ~1.5–2 min and hit the live vLLM server + live web; `data/` (reports, raw HTML) is gitignored.
+Never leave a host-run `celery` worker alive alongside the Docker one: both consume the same Redis queue,
+and the host one keeps stale code in memory (this produced a confusing `'charts' is undefined` failure once).
+`pkill -f "celery -A app.worker"` kills the calling shell too — use `pgrep -af celery` + `kill <pid>`.
 
 ## Architecture
 
@@ -93,7 +96,9 @@ must be list items. `app/agents/__init__.py` exports lazily because `reports` im
 
 **Service** — `app/main.py` (FastAPI, `/api/v1/research` in `app/api/research.py`; `/research/{id}/assets/{path}` serves chart SVGs / images from the report
 directory; `/health` probes vLLM),
-`app/worker.py` (Celery task `research.run`, Redis broker, `acks_late`, 30-min hard limit),
+`app/worker.py` (Celery task `research.run`, Redis broker, `acks_late`, 30-min hard limit; **one asyncio
+loop per prefork child** via `worker_process_init` — `asyncio.run()` per task closes the loop the
+module-level SQLAlchemy engine / OpenAI client are bound to and every 2nd task then fails),
 `app/db/models.py` (SQLAlchemy 2 async: `projects → tasks → results`, `competitors → products →
 price_records` (append-only price time series for Phase 2 history), `scraped_sources`), `app/db/repo.py`
 (task lifecycle + `save_result`, which upserts competitors/products by lower-cased key).
