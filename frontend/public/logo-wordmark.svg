@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 200" width="1040" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2c2c2e"/><stop offset="1" stop-color="#0d0d0f"/></linearGradient>
+    <linearGradient id="bar" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0a84ff"/><stop offset="1" stop-color="#5ac8fa"/></linearGradient>
+  </defs>
+  <g transform="translate(0 0) scale(0.390625)">
+    <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+    <rect x="164" y="242" width="30" height="58" rx="8" fill="url(#bar)"/>
+    <rect x="212" y="200" width="30" height="100" rx="8" fill="url(#bar)"/>
+    <rect x="260" y="158" width="30" height="142" rx="8" fill="url(#bar)"/>
+    <circle cx="227" cy="227" r="128" fill="none" stroke="#fff" stroke-width="34"/>
+    <path d="M322 322 L418 418" stroke="#fff" stroke-width="40" stroke-linecap="round"/>
+  </g>
+  <text x="240" y="128" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="112" font-weight="600" letter-spacing="-3" fill="#1d1d1f">Auto<tspan fill="#0071e3">Research</tspan></text>
+</svg>

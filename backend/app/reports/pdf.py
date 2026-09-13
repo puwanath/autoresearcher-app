@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
 import markdown
 
+_LOGO_URI = (
+    "data:image/svg+xml;base64,"
+    + base64.b64encode((Path(__file__).parent / "templates" / "logo.svg").read_bytes()).decode()
+)
+
 CSS = """
 @page {
   size: A4; margin: 22mm 18mm 20mm 18mm;
-  @top-left { content: "AutoResearch Agent — Puwanath Baibua"; font-size: 8pt; color: #888; }
+  font-family: "Sarabun", "Noto Sans Thai", "Loma", "Garuda", "Noto Sans", sans-serif;
+  @top-left { content: url("__LOGO__") "  AutoResearch Agent — Puwanath Baibua"; font-size: 8pt; color: #888;
+              vertical-align: middle; }
   @top-right { content: string(doctitle); font-size: 8pt; color: #888; }
   @bottom-center { content: "หน้า " counter(page) " / " counter(pages); font-size: 8pt; color: #888; }
 }
@@ -36,7 +44,7 @@ def markdown_to_html(md: str, title: str) -> str:
     )
     return (
         f"<!doctype html><html lang='th'><head><meta charset='utf-8'><title>{title}</title>"
-        f"<style>{CSS}</style></head><body>{body}</body></html>"
+        f"<style>{CSS.replace('__LOGO__', _LOGO_URI)}</style></head><body>{body}</body></html>"
     )
 
 

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ResearchForm } from "@/components/ResearchForm";
 import { TaskList } from "@/components/TaskList";
 
@@ -5,6 +6,7 @@ export default function Home() {
   return (
     <>
       <section className="pt-20 pb-14 text-center sm:pt-28">
+        <Image src="/logo.svg" alt="AutoResearch" width={72} height={72} priority className="fade-up mx-auto mb-6 rounded-[16px] shadow-[var(--shadow-float)]" />
         <p className="eyebrow fade-up">AutoResearch Agent</p>
         <h1 className="fade-up mt-3 text-[40px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[56px]">
           วิจัยคู่แข่ง<span className="text-ink-3">.</span> อัตโนมัติ<span className="text-ink-3">.</span>

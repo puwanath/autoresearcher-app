@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 
@@ -14,8 +15,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="glass sticky top-0 z-50 border-b border-black/5">
           <nav className="mx-auto flex h-12 max-w-6xl items-center justify-between px-6">
             <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-              <span className="grid h-6 w-6 place-items-center rounded-md bg-ink text-[11px] text-white"></span>
-              AutoResearch
+              <Image src="/logo.svg" alt="" width={24} height={24} priority className="rounded-[6px]" />
+              <span>Auto<span className="text-accent">Research</span></span>
             </Link>
             <div className="flex items-center gap-6 text-[13px] text-ink-2">
               <Link href="/" className="hover:text-ink">วิจัยใหม่</Link>
