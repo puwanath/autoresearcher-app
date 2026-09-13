@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**AutoResearch Agent** (Siam Sindhorn Co., Ltd.) — autonomous competitor/market research for Thai e-commerce.
+**AutoResearch Agent** (Puwanath Baibua) — autonomous competitor/market research for Thai e-commerce.
 Input (keyword / URL / SKU / competitor names) → LangGraph agentic loop → Markdown + PDF report.
 `AutoResearch_PRD_and_Plan.md` is the Thai-language PRD and 24-week plan; the repo is in **Phase 1 (MVP)**.
 Thai is first-class: prompts instruct the LLM to write Thai, reports/templates are Thai, PDF needs Thai fonts.

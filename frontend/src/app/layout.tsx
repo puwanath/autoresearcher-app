@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="mx-auto max-w-6xl px-6 pb-24">{children}</main>
         <footer className="border-t border-line-2 py-8 text-center text-[12px] text-ink-3">
-          AutoResearch Agent · Siam Sindhorn Co., Ltd.
+          AutoResearch Agent · Puwanath Baibua
         </footer>
       </body>
     </html>

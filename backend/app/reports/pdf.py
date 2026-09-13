@@ -9,7 +9,7 @@ import markdown
 CSS = """
 @page {
   size: A4; margin: 22mm 18mm 20mm 18mm;
-  @top-left { content: "AutoResearch Agent — Siam Sindhorn Co., Ltd."; font-size: 8pt; color: #888; }
+  @top-left { content: "AutoResearch Agent — Puwanath Baibua"; font-size: 8pt; color: #888; }
   @top-right { content: string(doctitle); font-size: 8pt; color: #888; }
   @bottom-center { content: "หน้า " counter(page) " / " counter(pages); font-size: 8pt; color: #888; }
 }
