@@ -125,6 +125,14 @@ async def save_result(session: AsyncSession, result: ResearchResult, pages: list
         session.add(Result(task_id=task.id, data_type="plan", content=result.plan.model_dump(mode="json")))
     if result.analysis:
         session.add(Result(task_id=task.id, data_type="analysis", content=result.analysis.model_dump(mode="json")))
+    if result.products:
+        session.add(
+            Result(
+                task_id=task.id,
+                data_type="products",
+                content={"items": [pr.model_dump(mode="json") for pr in result.products]},
+            )
+        )
     if result.price_stats:
         session.add(
             Result(task_id=task.id, data_type="price_stats", content=result.price_stats.model_dump(mode="json"))

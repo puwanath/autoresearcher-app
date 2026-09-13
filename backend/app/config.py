@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     use_playwright: bool = True
 
     data_dir: Path = Path("./data")
+    cors_origins: list[str] = ["http://localhost:3010", "http://localhost:3000"]
 
     @property
     def reports_dir(self) -> Path:

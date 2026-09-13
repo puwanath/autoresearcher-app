@@ -76,7 +76,16 @@ class FakeLLM:
                 key_findings=["k"],
                 market_overview="mo",
                 competition_type="price",
-                competitors=[CompetitorAssessment(brand_name="BrandA", price_position="mid-range")],
+                competitors=[
+                    CompetitorAssessment(
+                        brand_name="BrandA",
+                        price_position="mid-range",
+                        price_range_thb="100-200",
+                        strengths=["s"],
+                        weaknesses=["w"],
+                        channels=["Shopee"],
+                    )
+                ],
                 pricing_insight="pi",
                 recommended_price_range_thb="100-200",
                 channel_insight="ci",

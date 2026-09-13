@@ -50,5 +50,15 @@ services:
       api: { condition: service_started }
     extra_hosts: ["host.docker.internal:host-gateway"]
 
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8010/api/v1
+    image: autoresearch-frontend:latest
+    ports: ["3010:3000"]
+    depends_on:
+      api: { condition: service_started }
+
 volumes:
   pgdata:

@@ -9,7 +9,7 @@ loop, **FastAPI** + **Celery** for the service, **PostgreSQL** for storage, **Pl
 JS-rendered pages.
 
 Full PRD & 24-week plan: [`AutoResearch_PRD_and_Plan.md`](AutoResearch_PRD_and_Plan.md).
-Current status: **Phase 1 (MVP) complete** — see [Roadmap](#roadmap).
+Current status: **Phase 1 (MVP) complete + web UI** — see [Roadmap](#roadmap).
 
 ## How it works
 
@@ -56,10 +56,22 @@ curl -o report.pdf "localhost:8010/api/v1/research/<task_id>/report?format=pdf"
 
 Swagger UI: http://localhost:8010/docs
 
+### Web UI
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:3010 (expects the API on :8010, see frontend/.env.example)
+```
+
+Apple-style dashboard: submit a research task, watch the six-stage progress live, then read the
+executive summary, KPI tiles, brand price chart, competitor table, SWOT, action plan and product table —
+with one-click PDF / Markdown download.
+
 ### Full stack in Docker
 
 ```bash
-docker compose up --build   # api :8010, worker, postgres, redis (image includes Chromium + Thai fonts)
+docker compose up --build   # frontend :3010, api :8010, worker, postgres, redis
 ```
 
 ## Configuration
@@ -87,20 +99,24 @@ backend/app/
   db/         SQLAlchemy models, session, repository
   api/        FastAPI routes      main.py  worker.py (Celery)  cli.py
 backend/tests/  unit tests with fake LLM / search / fetch (no network)
+
+frontend/src/
+  app/          Next.js App Router pages (/, /research/[id])
+  components/   ResearchForm, TaskList, ProgressSteps, PriceChart, AnalysisSections, ...
+  lib/          typed API client (api.ts), formatters
 ```
 
 ## Tests & lint
 
 ```bash
-cd backend
-uv run pytest
-uv run ruff check . && uv run ruff format .
+cd backend && uv run pytest && uv run ruff check . && uv run ruff format .
+cd frontend && npx tsc --noEmit && npm run lint
 ```
 
 ## Roadmap
 
-- **Phase 1 — MVP** ✅ infra, vLLM module, scraper, agentic loop, Postgres schema, Markdown + PDF, CLI/API
+- **Phase 1 — MVP** ✅ infra, vLLM module, scraper, agentic loop, Postgres schema, Markdown + PDF, CLI/API,
+  web dashboard (pulled forward from Phase 2/3)
 - **Phase 2** image scraping & vision analysis, Shopee / Lazada / TikTok Shop integrations, price history,
-  sentiment & trend analysis, basic dashboard, MinIO
-- **Phase 3** full web UI (Next.js), auth & RBAC, sharing/comments, PPTX & Excel export, custom templates,
-  hardening, monitoring, UAT
+  sentiment & trend analysis, MinIO
+- **Phase 3** auth & RBAC, sharing/comments, PPTX & Excel export, custom templates, hardening, monitoring, UAT

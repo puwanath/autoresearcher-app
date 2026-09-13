@@ -50,7 +50,9 @@ channels, promotions, review cues) and computed price statistics. Produce a rigo
 Rules:
 - Ground every claim in the provided data; when data is missing, say so in data_gaps instead of guessing.
 - competitors: one assessment per distinct brand with enough data (max 8). price_position relative to the
-  computed market median. sentiment from review cues only.
+  computed market median; price_range_thb from brand_summary (min-max). Always give at least one concrete
+  strength and weakness per brand (derive from price, variants, promotions, channels, reviews). If a field is
+  truly unknown write 'ไม่ทราบ' rather than leaving it empty. sentiment from review cues only.
 - competition_type: whether this market competes on price, quality, brand, channel, or mixed — justify in
   market_overview.
 - pricing_insight + recommended_price_range_thb: a concrete THB range and positioning advice.

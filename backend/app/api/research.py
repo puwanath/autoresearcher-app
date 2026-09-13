@@ -5,11 +5,11 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session, repo
-from app.db.models import Result, Task, TaskStatus
+from app.db.models import PriceRecord, Result, Task, TaskStatus
 from app.schemas.research import OutputFormat, ResearchRequest
 
 router = APIRouter(prefix="/research", tags=["research"])
@@ -20,6 +20,16 @@ class TaskCreated(BaseModel):
     status: TaskStatus
 
 
+class TaskSummary(BaseModel):
+    task_id: str
+    status: TaskStatus
+    query: str
+    target_competitors: list[str]
+    created_at: str
+    finished_at: str | None
+    products: int = 0
+
+
 class TaskView(BaseModel):
     task_id: str
     status: TaskStatus
@@ -28,8 +38,10 @@ class TaskView(BaseModel):
     error: str | None
     created_at: str
     finished_at: str | None
+    plan: dict | None = None
     analysis: dict | None = None
     price_stats: dict | None = None
+    products: list[dict] = []
     artifacts: dict[str, str] = {}
 
 
@@ -42,10 +54,34 @@ async def create_research(req: ResearchRequest, session: AsyncSession = Depends(
     return TaskCreated(task_id=task.id, status=task.status)
 
 
-@router.get("", response_model=list[TaskCreated])
+@router.get("", response_model=list[TaskSummary])
 async def list_research(limit: int = Query(20, le=100), session: AsyncSession = Depends(get_session)):
-    rows = (await session.execute(select(Task).order_by(Task.created_at.desc()).limit(limit))).scalars()
-    return [TaskCreated(task_id=t.id, status=t.status) for t in rows]
+    rows = (await session.execute(select(Task).order_by(Task.created_at.desc()).limit(limit))).scalars().all()
+    counts = (
+        dict(
+            (
+                await session.execute(
+                    select(PriceRecord.task_id, func.count())
+                    .where(PriceRecord.task_id.in_([t.id for t in rows]))
+                    .group_by(PriceRecord.task_id)
+                )
+            ).all()
+        )
+        if rows
+        else {}
+    )
+    return [
+        TaskSummary(
+            task_id=t.id,
+            status=t.status,
+            query=t.payload.get("query", ""),
+            target_competitors=t.payload.get("target_competitors", []),
+            created_at=t.created_at.isoformat(),
+            finished_at=t.finished_at.isoformat() if t.finished_at else None,
+            products=counts.get(t.id, 0),
+        )
+        for t in rows
+    ]
 
 
 async def _task_view(session: AsyncSession, task_id: str) -> TaskView:
@@ -62,8 +98,10 @@ async def _task_view(session: AsyncSession, task_id: str) -> TaskView:
         error=task.error,
         created_at=task.created_at.isoformat(),
         finished_at=task.finished_at.isoformat() if task.finished_at else None,
+        plan=by_type["plan"].content if "plan" in by_type else None,
         analysis=by_type["analysis"].content if "analysis" in by_type else None,
         price_stats=by_type["price_stats"].content if "price_stats" in by_type else None,
+        products=(by_type["products"].content or {}).get("items", []) if "products" in by_type else [],
         artifacts={k.removeprefix("report_"): r.raw_file_url for k, r in by_type.items() if k.startswith("report_")},
     )
 

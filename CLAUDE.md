@@ -9,9 +9,9 @@ Input (keyword / URL / SKU / competitor names) → LangGraph agentic loop → Ma
 `AutoResearch_PRD_and_Plan.md` is the Thai-language PRD and 24-week plan; the repo is in **Phase 1 (MVP)**.
 Thai is first-class: prompts instruct the LLM to write Thai, reports/templates are Thai, PDF needs Thai fonts.
 
-Layout: `backend/` (Python 3.12, managed with **uv**), `docker-compose.yml`, `.env` at repo root
-(`Settings` reads `.env` from cwd or `../`, so commands work from either `backend/` or the root).
-`frontend/` (Next.js) is planned for Phase 2–3 and does not exist yet.
+Layout: `backend/` (Python 3.12, managed with **uv**), `frontend/` (Next.js 16 / React 19 / Tailwind v4 /
+TypeScript, npm), `docker-compose.yml`, `.env` at repo root (`Settings` reads `.env` from cwd or `../`, so
+backend commands work from either `backend/` or the root).
 
 ## Commands
 
@@ -30,7 +30,11 @@ uv run autoresearch health                # vLLM reachability
 docker compose up -d postgres redis       # from repo root; host ports 5433 / 6380 (8000/5432 are taken by another project)
 uv run uvicorn app.main:app --port 8010 --reload
 uv run celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
-docker compose up --build                 # full stack; API on :8010
+docker compose up --build                 # full stack; frontend :3010, API :8010
+
+cd ../frontend && npm install
+npm run dev                               # :3010; API base from NEXT_PUBLIC_API_URL (frontend/.env.local)
+npx tsc --noEmit && npm run lint          # typecheck + eslint (no frontend unit tests yet)
 ```
 
 Real runs take ~1.5–2 min and hit the live vLLM server + live web; `data/` (reports, raw HTML) is gitignored.
@@ -88,9 +92,21 @@ price_records` (append-only price time series for Phase 2 history), `scraped_sou
 (task lifecycle + `save_result`, which upserts competitors/products by lower-cased key).
 Tables are created by `init_db()` at startup — no Alembic yet; add migrations once the schema stabilises.
 
+**Frontend** — `frontend/src/`. Apple-style design system lives entirely in `app/globals.css`
+(Tailwind v4 `@theme` tokens: `ink`, `canvas`, `accent`, …; component classes `.card`, `.glass`,
+`.btn-primary`, `.field`). Pages: `/` (`ResearchForm` + polling `TaskList`), `/research/[id]`
+(`ResearchDetail`, a client component that polls `GET /research/{id}` every 2.5 s while pending/running).
+`lib/api.ts` holds the TypeScript mirror of the backend Pydantic models — update both when a schema changes.
+`ProgressSteps` derives stage state from the `events` strings (`"[hh:mm:ss] stage: msg"`, parsed by
+`lib/format.ts::parseEvent`), so stage names in `app/agents/graph.py::_emit` are a UI contract.
+Recharts 3: per-bar colours use `<Cell>`; a custom `shape` renders nothing with animation on.
+`NEXT_PUBLIC_API_URL` is inlined at build time (Dockerfile `ARG`), and the browser — not the container —
+calls the API, so it must be a host-reachable URL.
+
 ## Phase scope
 
-Phase 1 (current): FastAPI + Postgres + Redis + Compose, vLLM module, HTML scraper, text-only loop,
-Markdown + PDF, CLI/API e2e. Phase 2: images/vision, Shopee/Lazada/TikTok integrations, price history,
-sentiment, dashboard, MinIO. Phase 3: full UI, auth/RBAC, sharing, PPTX/Excel, templates, hardening.
+Phase 1 (done): FastAPI + Postgres + Redis + Compose, vLLM module, HTML scraper, text-only loop,
+Markdown + PDF, CLI/API e2e, plus the web dashboard (pulled forward). Phase 2: images/vision,
+Shopee/Lazada/TikTok integrations, price history, sentiment, MinIO. Phase 3: auth/RBAC, sharing,
+PPTX/Excel, templates, hardening.
 Keep changes inside the active phase — scope creep is a tracked risk in the PRD.

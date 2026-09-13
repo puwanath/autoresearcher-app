@@ -141,10 +141,13 @@ class PriceStats(BaseModel):
 class CompetitorAssessment(BaseModel):
     brand_name: str
     price_position: Literal["budget", "mid-range", "premium", "unknown"] = "unknown"
-    price_range_thb: str = ""
-    strengths: list[str] = Field(default_factory=list)
-    weaknesses: list[str] = Field(default_factory=list)
-    channels: list[str] = Field(default_factory=list)
+    price_range_thb: str = Field(
+        ..., min_length=1, description="human-readable THB range, e.g. '2,990–8,990 บาท' or 'ไม่ทราบ'"
+    )
+    # min_length=1 becomes minItems in the JSON schema, so guided decoding cannot return empty lists
+    strengths: list[str] = Field(..., min_length=1)
+    weaknesses: list[str] = Field(..., min_length=1)
+    channels: list[str] = Field(..., min_length=1, description="use ['ไม่ทราบ'] if unknown")
     sentiment: Literal["positive", "neutral", "negative", "mixed", "unknown"] = "unknown"
     sentiment_note: str = ""
 
