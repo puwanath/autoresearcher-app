@@ -139,6 +139,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   create: (body: ResearchRequest) =>
     http<{ task_id: string; status: TaskStatus }>("/research", { method: "POST", body: JSON.stringify(body) }),
+  retry: (id: string) => http<{ task_id: string; status: TaskStatus }>(`/research/${id}/retry`, { method: "POST" }),
   list: (limit = 20) => http<TaskSummary[]>(`/research?limit=${limit}`),
   get: (id: string) => http<TaskView>(`/research/${id}`),
   reportUrl: (id: string, format: OutputFormat) => `${API_URL}/research/${id}/report?format=${format}`,

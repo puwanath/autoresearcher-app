@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, type TaskView } from "@/lib/api";
 import { duration, parseEvent, thb } from "@/lib/format";
@@ -17,6 +18,20 @@ export function ResearchDetail({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [showProducts, setShowProducts] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const router = useRouter();
+
+  async function retry() {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      const { task_id } = await api.retry(id);
+      router.push(`/research/${task_id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "ส่งคำขอไม่สำเร็จ");
+      setRetrying(false);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -76,6 +91,16 @@ export function ResearchDetail({ id }: { id: string }) {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={task.status} />
+            {task.status === "failed" && (
+              <button onClick={retry} disabled={retrying} className="btn-primary">
+                {retrying ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : "ลองใหม่"}
+              </button>
+            )}
+            {task.status === "completed" && (
+              <button onClick={retry} disabled={retrying} className="btn-secondary" title="รันงานวิจัยนี้อีกครั้งด้วยข้อมูลล่าสุด">
+                {retrying ? "กำลังส่ง…" : "รันอีกครั้ง"}
+              </button>
+            )}
             {task.artifacts.pdf && (
               <a href={api.reportUrl(id, "pdf")} className="btn-primary">ดาวน์โหลด PDF</a>
             )}
@@ -90,8 +115,19 @@ export function ResearchDetail({ id }: { id: string }) {
 
       {task.status === "failed" && (
         <div className="card border border-danger/20 p-6">
-          <p className="font-semibold text-danger">งานล้มเหลว</p>
-          <pre className="mt-2 whitespace-pre-wrap text-[13px] text-ink-2">{task.error}</pre>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-danger">งานล้มเหลว</p>
+              <p className="mt-1 text-[13px] text-ink-2">
+                ข้อมูลที่เก็บมาแล้วยังอยู่ในระบบ กด "ลองใหม่" เพื่อรันงานวิจัยนี้อีกครั้งเป็นงานใหม่
+              </p>
+            </div>
+            <button onClick={retry} disabled={retrying} className="btn-primary">
+              {retrying ? "กำลังส่ง…" : "ลองใหม่"}
+            </button>
+          </div>
+          <pre className="mt-4 whitespace-pre-wrap rounded-xl bg-canvas p-4 text-[12px] text-ink-2">{task.error}</pre>
+          {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
         </div>
       )}
 

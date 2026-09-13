@@ -57,6 +57,21 @@ async def create_research(req: ResearchRequest, session: AsyncSession = Depends(
     return TaskCreated(task_id=task.id, status=task.status)
 
 
+@router.post("/{task_id}/retry", response_model=TaskCreated, status_code=202)
+async def retry_research(task_id: str, session: AsyncSession = Depends(get_session)):
+    """Re-run a task with the same request as a new task (the original record is kept for history)."""
+    from app.worker import run_research_task
+
+    original = await repo.get_task(session, task_id)
+    if original is None:
+        raise HTTPException(404, "task not found")
+    if original.status in (TaskStatus.pending, TaskStatus.running):
+        raise HTTPException(409, "task is still running")
+    task = await repo.create_task(session, ResearchRequest.model_validate(original.payload), original.project_id)
+    run_research_task.delay(task.id)
+    return TaskCreated(task_id=task.id, status=task.status)
+
+
 @router.get("", response_model=list[TaskSummary])
 async def list_research(limit: int = Query(20, le=100), session: AsyncSession = Depends(get_session)):
     rows = (await session.execute(select(Task).order_by(Task.created_at.desc()).limit(limit))).scalars().all()
