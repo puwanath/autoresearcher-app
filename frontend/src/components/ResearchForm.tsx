@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type KeyboardEvent } from "react";
-import { api, type OutputFormat } from "@/lib/api";
+import { api, FORMAT_LABEL, type OutputFormat } from "@/lib/api";
 
 const EXAMPLES = ["ครีมกันแดด SPF50+", "กาแฟดริป", "เซรั่มวิตามินซี", "หูฟังไร้สาย"];
 
@@ -131,7 +131,7 @@ export function ResearchForm() {
           <div className="sm:col-span-2">
             <label className="label">รูปแบบรายงาน</label>
             <div className="flex gap-2">
-              {(["md", "pdf"] as OutputFormat[]).map((f) => (
+              {(["md", "pdf", "pptx", "xlsx"] as OutputFormat[]).map((f) => (
                 <button
                   key={f}
                   onClick={() => toggleFormat(f)}
@@ -139,7 +139,7 @@ export function ResearchForm() {
                     formats.includes(f) ? "bg-ink text-white" : "border border-line text-ink-2 hover:text-ink"
                   }`}
                 >
-                  {f === "md" ? "Markdown" : "PDF"}
+                  {FORMAT_LABEL[f]}
                 </button>
               ))}
             </div>

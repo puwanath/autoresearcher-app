@@ -143,7 +143,11 @@ async def download_report(
     path = view.artifacts.get(format.value)
     if not path or not Path(path).exists():
         raise HTTPException(404, f"no {format.value} report for this task (status={view.status})")
-    media = "application/pdf" if format == OutputFormat.pdf else "text/markdown; charset=utf-8"
+    media = {
+        OutputFormat.pdf: "application/pdf",
+        OutputFormat.pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        OutputFormat.xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }.get(format, "text/markdown; charset=utf-8")
     return FileResponse(path, media_type=media, filename=Path(path).name)
 
 

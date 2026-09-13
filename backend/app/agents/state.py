@@ -27,6 +27,7 @@ class ResearchState(TypedDict, total=False):
     pages: list[ScrapedPage]
     products: list[ExtractedProduct]
     competitors: list[CompetitorInfo]
+    page_insights: list[str]
     price_stats: PriceStats
     analysis: AnalysisReport
     report_markdown: str

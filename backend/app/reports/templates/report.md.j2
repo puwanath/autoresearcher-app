@@ -62,21 +62,101 @@
 | {{ p.product_name | trunc(60) }} | {{ p.brand_name or "-" }} | {{ p.variant or "-" }} | {{ p.price.amount | thb(p.price.currency) }} | {{ p.price.original_price | thb(p.price.currency) }} | {{ (p.price.discount_percentage ~ "%") if p.price.discount_percentage else "-" }} | {{ p.sales_channels | map(attribute="channel_name") | join(", ") or "-" }} | [link]({{ p.data_source_url }}) |
 {% endfor %}
 
-## ส่วนที่ 3: ช่องทางการขาย (Sales Channel Strategy)
+{% if a.promotion_analysis %}
+### กลยุทธ์โปรโมชั่น
 
-{{ a.channel_insight }}
+{{ a.promotion_analysis.summary }}
+{% if a.promotion_analysis.promo_type_counts %}
+| ประเภทโปรโมชั่น | จำนวน | แบรนด์ที่ใช้ |
+|---|---:|---|
+{% for r in a.promotion_analysis.promo_type_counts -%}
+| {{ r.promo_type }} | {{ r.count }} | {{ r.brands | join(", ") }} |
+{% endfor %}
+{% endif %}
+{% for b in a.promotion_analysis.brand_tactics %}
+- {{ b }}
+{%- endfor %}
+
+**คำแนะนำ:** {{ a.promotion_analysis.recommendations | join(" · ") }}
+{% endif %}
+{% if a.feature_comparison %}
+### เปรียบเทียบคุณสมบัติสินค้า (Feature Comparison)
+
+{{ a.feature_comparison.summary }}
+
+| คุณสมบัติ | แบรนด์ที่มี | พื้นฐานของตลาด |
+|---|---|:---:|
+{% for f in a.feature_comparison.features -%}
+| {{ f.feature }} | {{ f.brands_offering | join(", ") }} | {{ "✓" if f.is_table_stakes else "" }} |
+{% endfor %}
+**โอกาสสร้างความแตกต่าง:**
+{% for o in a.feature_comparison.differentiation_opportunities %}
+- {{ o }}
+{%- endfor %}
+{% endif %}
+
+## ส่วนที่ 3: ช่องทางการจัดจำหน่าย (Distribution Channel Analysis)
+
+{{ a.channel_analysis.summary if a.channel_analysis else a.channel_insight }}
 {% if charts.channels %}
 ![จำนวนรายการสินค้าที่พบในแต่ละช่องทาง]({{ charts.channels }})
 {% endif %}
+{% if a.channel_analysis and a.channel_analysis.matrix %}
+### Matrix แบรนด์ × ช่องทาง (จำนวนรายการที่พบ)
+{% set chs = a.channel_analysis.matrix[0].keys() | reject("in", ["brand", "total"]) | list %}
+| แบรนด์ | {{ chs | join(" | ") }} | รวม |
+|---|{% for c in chs %}---:|{% endfor %}---:|
+{% for r in a.channel_analysis.matrix -%}
+| {{ r.brand }} | {% for c in chs %}{{ r[c] or "" }} | {% endfor %}{{ r.total }} |
+{% endfor %}
+{% endif %}
+{% if a.channel_analysis %}
+### บทบาทและความเหมาะสมของแต่ละช่องทาง
+
+| ช่องทาง | รายการ | แบรนด์ | ราคามัธยฐาน | บทบาท | จุดแข็ง | ข้อควรระวัง | เหมาะกับเรา | คำแนะนำ |
+|---|---:|---:|---:|---|---|---|:---:|---|
+{% for c in a.channel_analysis.channels -%}
+{% set st = (a.channel_analysis.stats | selectattr("channel_name", "equalto", c.channel_name) | list | first) -%}
+| **{{ c.channel_name }}** | {{ st.listing_count if st else "" }} | {{ st.brand_count if st else "" }} | {{ st.price_median | thb if st else "" }} | {{ c.role }} | {{ c.strengths | join("; ") }} | {{ c.watchouts | join("; ") }} | {{ {"high": "สูง", "medium": "กลาง", "low": "ต่ำ"}[c.fit_for_us] }} | {{ c.recommendation }} |
+{% endfor %}
+**ลำดับการเข้าช่องทางที่แนะนำ**
+{% for r in a.channel_analysis.channel_mix_recommendation %}
+{{ loop.index }}. {{ r }}
+{%- endfor %}
+{% else %}
 | ช่องทาง | จำนวนรายการที่พบ |
 |---|---:|
 {% for ch, n in channel_counts -%}
 | {{ ch }} | {{ n }} |
 {% endfor %}
+{% endif %}
 
 **ความรู้สึกของลูกค้า (Sentiment):** {{ a.sentiment_summary }}
+{% if a.usage_insights %}
+## ส่วนที่ 4: พฤติกรรมและการใช้งานของผู้บริโภค (Usage & Consumer Insights)
 
-## ส่วนที่ 4: ข้อเสนอแนะเชิงกลยุทธ์ (Strategic Recommendations)
+{{ a.usage_insights.summary }}
+
+| การใช้งานหลัก | โอกาส/สถานการณ์ที่ใช้ | เหตุผลในการซื้อ | ปัญหา / ข้อกังวล |
+|---|---|---|---|
+| {{ a.usage_insights.use_cases | join("<br>") }} | {{ a.usage_insights.usage_occasions | join("<br>") or "-" }} | {{ a.usage_insights.purchase_drivers | join("<br>") }} | {{ a.usage_insights.pain_points | join("<br>") }} |
+
+### กลุ่มเป้าหมาย
+
+| กลุ่ม | ความต้องการ | แบรนด์ที่ตอบโจทย์ | โอกาสสำหรับเรา |
+|---|---|---|---|
+{% for t in a.usage_insights.target_segments -%}
+| **{{ t.segment }}** | {{ t.needs | join("; ") }} | {{ t.brands_serving | join(", ") or "-" }} | {{ t.opportunity or "-" }} |
+{% endfor %}
+{% if a.usage_insights.evidence %}
+**หลักฐานจากรีวิว**
+{% for e in a.usage_insights.evidence %}
+> {{ e }}
+{% endfor %}
+{% endif %}
+{% endif %}
+
+## ส่วนที่ {{ "5" if a.usage_insights else "4" }}: ข้อเสนอแนะเชิงกลยุทธ์ (Strategic Recommendations)
 
 ### SWOT Analysis
 

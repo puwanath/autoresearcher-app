@@ -22,7 +22,7 @@ def run(
     competitors: str = typer.Option("", "--competitors", "-c", help="Comma-separated competitor names"),
     category: str | None = typer.Option(None, "--category"),
     our_brand: str | None = typer.Option(None, "--our-brand"),
-    formats: str = typer.Option("md,pdf", "--formats", "-f", help="md,pdf"),
+    formats: str = typer.Option("md,pdf", "--formats", "-f", help="comma-separated: md,pdf,pptx,xlsx"),
     language: str = typer.Option("th", "--lang"),
     verbose: bool = typer.Option(False, "-v"),
 ):

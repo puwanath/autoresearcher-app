@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import statistics
-from collections import defaultdict
+from collections import Counter, defaultdict
 
-from app.schemas.research import CompetitorInfo, ExtractedProduct, PriceStats
+from app.schemas.research import ChannelStats, CompetitorInfo, ExtractedProduct, PriceStats
 
 
 def canonical_brands(products: list[ExtractedProduct]) -> dict[str, str]:
@@ -109,3 +109,104 @@ def brand_price_table(products: list[ExtractedProduct]) -> list[dict]:
         )
     rows.sort(key=lambda r: (r["median_price"] is None, r["median_price"] or 0))
     return rows
+
+
+def channel_matrix(products: list[ExtractedProduct], max_brands: int = 12) -> list[dict]:
+    """Rows = brands (by listing count), columns = channels; cell = number of listings."""
+    counts: dict[str, Counter] = defaultdict(Counter)
+    for p in products:
+        for c in p.sales_channels:
+            if c.channel_name.strip():
+                counts[(p.brand_name or "Unknown").strip()][c.channel_name.strip()] += 1
+    channels = [ch for ch, _ in Counter(ch for b in counts.values() for ch in b.elements()).most_common(8)]
+    rows = []
+    for brand, ctr in sorted(counts.items(), key=lambda kv: -sum(kv[1].values()))[:max_brands]:
+        rows.append({"brand": brand, **{ch: ctr.get(ch, 0) for ch in channels}, "total": sum(ctr.values())})
+    return rows
+
+
+def channel_stats(products: list[ExtractedProduct], max_channels: int = 8) -> list[ChannelStats]:
+    by_ch: dict[str, list[tuple[ExtractedProduct, float | None]]] = defaultdict(list)
+    for p in products:
+        for c in p.sales_channels:
+            if c.channel_name.strip():
+                by_ch[c.channel_name.strip()].append((p, c.seller_rating))
+    out = []
+    for ch, items in sorted(by_ch.items(), key=lambda kv: -len(kv[1]))[:max_channels]:
+        prices = [p.price.amount for p, _ in items if p.price.amount]
+        ratings = [r for _, r in items if r]
+        out.append(
+            ChannelStats(
+                channel_name=ch,
+                listing_count=len(items),
+                brand_count=len({p.brand_name for p, _ in items if p.brand_name}),
+                brands=sorted({p.brand_name for p, _ in items if p.brand_name})[:10],
+                price_min=min(prices) if prices else None,
+                price_max=max(prices) if prices else None,
+                price_median=round(statistics.median(prices), 2) if prices else None,
+                avg_seller_rating=round(statistics.fmean(ratings), 2) if ratings else None,
+                promo_count=sum(len(p.promotions) for p, _ in items),
+            )
+        )
+    return out
+
+
+def promo_type_counts(products: list[ExtractedProduct]) -> list[dict]:
+    ctr: Counter = Counter()
+    brands: dict[str, set] = defaultdict(set)
+    for p in products:
+        for pr in p.promotions:
+            key = pr.promo_type.strip()
+            if key:
+                ctr[key] += 1
+                if p.brand_name:
+                    brands[key].add(p.brand_name)
+    return [{"promo_type": k, "count": n, "brands": sorted(brands[k])[:8]} for k, n in ctr.most_common(10)]
+
+
+def spec_frequency(products: list[ExtractedProduct], max_keys: int = 15) -> list[dict]:
+    """Which spec keys appear across products, with example values — input for the feature comparison."""
+    ctr: Counter = Counter()
+    examples: dict[str, dict[str, str]] = defaultdict(dict)
+    for p in products:
+        for k, v in p.specs.items():
+            key = k.strip().lower()
+            if key:
+                ctr[key] += 1
+                if p.brand_name and len(examples[key]) < 6:
+                    examples[key][p.brand_name] = str(v)[:40]
+    return [{"spec": k, "count": n, "by_brand": examples[k]} for k, n in ctr.most_common(max_keys)]
+
+
+def usage_corpus(products: list[ExtractedProduct], page_insights: list[str], limit: int = 80) -> dict:
+    """Consumer-behaviour raw material for the usage analysis."""
+    return {
+        "target_users": Counter(u for p in products for u in p.target_users).most_common(20),
+        "use_cases": Counter(u for p in products for u in p.use_cases).most_common(20),
+        "key_claims": Counter(u for p in products for u in p.key_claims).most_common(20),
+        "review_highlights": [f"[{p.brand_name or '-'}] {h}" for p in products for h in p.review_highlights][:limit],
+        "page_insights": page_insights[:40],
+        "rating_by_brand": {
+            b: round(statistics.fmean(r), 2)
+            for b, r in _group(products, lambda p: p.brand_name, lambda p: p.rating).items()
+        },
+    }
+
+
+def _group(products, key, value) -> dict[str, list[float]]:
+    out: dict[str, list[float]] = defaultdict(list)
+    for p in products:
+        k, v = key(p), value(p)
+        if k and v:
+            out[k].append(v)
+    return out
+
+
+def chart_brands(products: list[ExtractedProduct], highlight: list[str], max_brands: int = 12) -> list[dict]:
+    """Brand rows for charts: target competitors always included, then the most-listed brands, sorted by median."""
+    rows = [r for r in brand_price_table(products) if r["median_price"] is not None]
+    hl = {h.lower() for h in highlight}
+    targets = [r for r in rows if r["brand"].lower() in hl]
+    others = sorted((r for r in rows if r["brand"].lower() not in hl), key=lambda r: -r["products"])
+    picked = (targets + others)[:max_brands]
+    return sorted(picked, key=lambda r: r["median_price"])

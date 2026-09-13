@@ -17,6 +17,8 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 class OutputFormat(StrEnum):
     markdown = "md"
     pdf = "pdf"
+    pptx = "pptx"
+    xlsx = "xlsx"
 
 
 class ResearchRequest(BaseModel):
@@ -107,6 +109,9 @@ class ExtractedProduct(BaseModel):
     review_count: int | None = None
     image_urls: list[str] = Field(default_factory=list)
     review_highlights: list[str] = Field(default_factory=list, description="Short quotes / sentiment cues")
+    target_users: list[str] = Field(default_factory=list, description="who the product is for, e.g. ผิวมัน, นักวิ่ง")
+    use_cases: list[str] = Field(default_factory=list, description="how / when it is used, from copy or reviews")
+    key_claims: list[str] = Field(default_factory=list, description="marketing claims / differentiators")
     data_source_url: str = ""
 
 
@@ -141,6 +146,9 @@ class PageExtraction(BaseModel):
     page_type: Literal["product", "listing", "review", "brand", "news", "other"] = "other"
     competitors: list[CompetitorInfo] = Field(default_factory=list)
     products: list[ExtractedProduct] = Field(default_factory=list)
+    consumer_insights: list[str] = Field(
+        default_factory=list, description="page-level observations about how/why customers buy or use (max 6)"
+    )
     notes: str = ""
 
 
@@ -190,6 +198,82 @@ class SWOT(BaseModel):
     threats: list[str] = Field(default_factory=list)
 
 
+class ChannelStats(BaseModel):
+    """Computed per channel in Python; the LLM only adds role/recommendation."""
+
+    channel_name: str
+    listing_count: int = 0
+    brand_count: int = 0
+    brands: list[str] = Field(default_factory=list)
+    price_min: float | None = None
+    price_max: float | None = None
+    price_median: float | None = None
+    avg_seller_rating: float | None = None
+    promo_count: int = 0
+
+
+class ChannelAssessment(BaseModel):
+    channel_name: str
+    role: str = Field(..., description="what this channel is for in this market, e.g. 'ช่องทางหลักของแบรนด์ mass'")
+    strengths: list[str] = Field(..., min_length=1)
+    watchouts: list[str] = Field(..., min_length=1)
+    fit_for_us: Literal["high", "medium", "low"] = "medium"
+    recommendation: str
+
+
+class ChannelAnalysis(BaseModel):
+    summary: str
+    channels: list[ChannelAssessment]
+    channel_mix_recommendation: list[str] = Field(..., description="ordered rollout / mix advice")
+    matrix: list[dict] = Field(default_factory=list, description="computed brand×channel counts (filled in Python)")
+    stats: list[ChannelStats] = Field(default_factory=list)
+
+
+class TargetSegment(BaseModel):
+    segment: str
+    needs: list[str] = Field(..., min_length=1)
+    brands_serving: list[str] = Field(..., description="brands from the data that target this segment; ['ไม่พบ'] if none")
+    opportunity: str = Field(..., min_length=1, description="how the user's brand could win this segment")
+
+
+class UsageInsights(BaseModel):
+    summary: str
+    use_cases: list[str] = Field(..., min_length=1)
+    usage_occasions: list[str] = Field(default_factory=list)
+    purchase_drivers: list[str] = Field(..., min_length=1)
+    pain_points: list[str] = Field(..., min_length=1)
+    target_segments: list[TargetSegment] = Field(..., min_length=1)
+    evidence: list[str] = Field(default_factory=list, description="short review quotes backing the above")
+
+
+class PromotionAnalysis(BaseModel):
+    summary: str
+    promo_type_counts: list[dict] = Field(default_factory=list, description="computed in Python")
+    brand_tactics: list[str] = Field(default_factory=list, description="'Brand: tactic' bullets")
+    recommendations: list[str] = Field(..., min_length=1)
+
+
+class FeatureRow(BaseModel):
+    feature: str
+    brands_offering: list[str] = Field(default_factory=list)
+    is_table_stakes: bool = False
+
+
+class FeatureComparison(BaseModel):
+    summary: str
+    features: list[FeatureRow] = Field(..., min_length=1)
+    differentiation_opportunities: list[str] = Field(..., min_length=1)
+
+
+class DeepAnalysis(BaseModel):
+    """Second analyst pass: distribution, usage/consumer behaviour, promotions, features."""
+
+    channel_analysis: ChannelAnalysis
+    usage_insights: UsageInsights
+    promotion_analysis: PromotionAnalysis
+    feature_comparison: FeatureComparison
+
+
 class AnalysisReport(BaseModel):
     title: str
     executive_summary: str
@@ -207,6 +291,11 @@ class AnalysisReport(BaseModel):
     action_plan: list[str]
     data_gaps: list[str] = Field(default_factory=list)
     confidence: Literal["low", "medium", "high"] = "medium"
+    # deep-dive sections (filled from DeepAnalysis; None on tasks that predate them)
+    channel_analysis: ChannelAnalysis | None = None
+    usage_insights: UsageInsights | None = None
+    promotion_analysis: PromotionAnalysis | None = None
+    feature_comparison: FeatureComparison | None = None
 
     _pretty = field_validator("recommended_price_range_thb")(lambda v: pretty_thb_range(v))
 

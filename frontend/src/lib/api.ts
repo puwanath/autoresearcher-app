@@ -1,7 +1,8 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8010/api/v1";
 
 export type TaskStatus = "pending" | "running" | "completed" | "failed";
-export type OutputFormat = "md" | "pdf";
+export type OutputFormat = "md" | "pdf" | "pptx" | "xlsx";
+export const FORMAT_LABEL: Record<OutputFormat, string> = { md: "Markdown", pdf: "PDF", pptx: "PowerPoint", xlsx: "Excel" };
 
 export interface ResearchRequest {
   query: string;
@@ -55,6 +56,65 @@ export interface CompetitorAssessment {
   sentiment_note: string;
 }
 
+export interface ChannelStats {
+  channel_name: string;
+  listing_count: number;
+  brand_count: number;
+  brands: string[];
+  price_min: number | null;
+  price_max: number | null;
+  price_median: number | null;
+  avg_seller_rating: number | null;
+  promo_count: number;
+}
+
+export interface ChannelAssessment {
+  channel_name: string;
+  role: string;
+  strengths: string[];
+  watchouts: string[];
+  fit_for_us: "high" | "medium" | "low";
+  recommendation: string;
+}
+
+export interface ChannelAnalysis {
+  summary: string;
+  channels: ChannelAssessment[];
+  channel_mix_recommendation: string[];
+  matrix: Record<string, string | number>[];
+  stats: ChannelStats[];
+}
+
+export interface TargetSegment {
+  segment: string;
+  needs: string[];
+  brands_serving: string[];
+  opportunity: string;
+}
+
+export interface UsageInsights {
+  summary: string;
+  use_cases: string[];
+  usage_occasions: string[];
+  purchase_drivers: string[];
+  pain_points: string[];
+  target_segments: TargetSegment[];
+  evidence: string[];
+}
+
+export interface PromotionAnalysis {
+  summary: string;
+  promo_type_counts: { promo_type: string; count: number; brands: string[] }[];
+  brand_tactics: string[];
+  recommendations: string[];
+}
+
+export interface FeatureComparison {
+  summary: string;
+  features: { feature: string; brands_offering: string[]; is_table_stakes: boolean }[];
+  differentiation_opportunities: string[];
+}
+
 export interface Analysis {
   title: string;
   executive_summary: string;
@@ -72,6 +132,10 @@ export interface Analysis {
   action_plan: string[];
   data_gaps: string[];
   confidence: "low" | "medium" | "high";
+  channel_analysis?: ChannelAnalysis | null;
+  usage_insights?: UsageInsights | null;
+  promotion_analysis?: PromotionAnalysis | null;
+  feature_comparison?: FeatureComparison | null;
 }
 
 export interface PriceStats {

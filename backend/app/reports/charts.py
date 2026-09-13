@@ -7,7 +7,7 @@ from collections import Counter
 from html import escape
 from pathlib import Path
 
-from app.agents.stats import brand_price_table
+from app.agents.stats import chart_brands
 from app.schemas.research import ExtractedProduct
 
 FONT = "Sarabun, 'Noto Sans Thai', Loma, Garuda, -apple-system, Helvetica, Arial, sans-serif"
@@ -70,7 +70,7 @@ def _hbar_svg(rows: list[tuple[str, float, float | None, float | None, bool]], *
 
 
 def price_chart_svg(products: list[ExtractedProduct], highlight: list[str], max_brands: int = 12) -> str | None:
-    rows = [r for r in brand_price_table(products) if r["median_price"] is not None][:max_brands]
+    rows = chart_brands(products, highlight, max_brands)
     if len(rows) < 2:
         return None
     hl = {h.lower() for h in highlight}

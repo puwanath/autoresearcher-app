@@ -23,13 +23,32 @@ from slugify import slugify
 
 from app.agents import prompts
 from app.agents.state import ResearchState
-from app.agents.stats import brand_price_table, dedupe_competitors, dedupe_products, price_stats
+from app.agents.stats import (
+    brand_price_table,
+    channel_matrix,
+    channel_stats,
+    dedupe_competitors,
+    dedupe_products,
+    price_stats,
+    promo_type_counts,
+    spec_frequency,
+    usage_corpus,
+)
 from app.config import Settings, get_settings
 from app.llm import LLMClient, get_llm
-from app.reports import Cover, fetch_product_images, render_markdown, render_pdf, write_charts
+from app.reports import (
+    Cover,
+    fetch_product_images,
+    render_markdown,
+    render_pdf,
+    render_pptx,
+    render_xlsx,
+    write_charts,
+)
 from app.schemas.research import (
     AnalysisReport,
     CompetitorInfo,
+    DeepAnalysis,
     OutputFormat,
     PageExtraction,
     ReportArtifact,
@@ -205,6 +224,7 @@ async def extract_node(state: ResearchState, config: RunnableConfig) -> dict:
 
     results = await asyncio.gather(*(one(p) for p in new_pages))
     products, competitors, errors = list(state.get("products", [])), list(state.get("competitors", [])), []
+    page_insights = list(state.get("page_insights", []))
     relevant = 0
     for page, ext in results:
         if ext is None:
@@ -213,6 +233,7 @@ async def extract_node(state: ResearchState, config: RunnableConfig) -> dict:
         if not ext.is_relevant:
             continue
         relevant += 1
+        page_insights.extend(ext.consumer_insights)
         single_product_page = ext.page_type == "product" and len(ext.products) == 1
         for prod in ext.products:
             prod.data_source_url = prod.data_source_url or page.final_url
@@ -236,6 +257,7 @@ async def extract_node(state: ResearchState, config: RunnableConfig) -> dict:
     return {
         "products": products,
         "competitors": competitors,
+        "page_insights": page_insights,
         "_extracted_urls": state.get("_extracted_urls", []) + [p.url for p in new_pages],
         "events": [ev],
         "errors": errors,
@@ -260,30 +282,78 @@ async def analyze_node(state: ResearchState, config: RunnableConfig) -> dict:
     req = state["request"]
     products = state["products"]
     stats = price_stats(products)
-    payload = {
+    lang = _lang(req)
+    base = {
         "research_topic": req.query,
         "our_brand": req.our_brand,
         "target_competitors": req.target_competitors,
         "product_category": state["plan"].product_category,
+    }
+    main_payload = {
+        **base,
         "price_stats": stats.model_dump(),
         "brand_summary": brand_price_table(products),
         "competitors": [c.model_dump() for c in state["competitors"]],
-        "products": [p.model_dump(exclude={"image_urls", "specs"}) for p in products[:80]],
+        "products": [
+            p.model_dump(exclude={"image_urls", "specs", "target_users", "use_cases", "key_claims"})
+            for p in products[:80]
+        ],
         "pages_analyzed": len([p for p in state["pages"] if p.ok]),
     }
-    analysis = await deps.llm.chat_json(
-        [
-            {"role": "system", "content": prompts.ANALYST.format(lang=_lang(req))},
-            {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
-        ],
-        AnalysisReport,
-        max_tokens=8000,
-        think=deps.settings.vllm_enable_thinking,
-    )
+    ch_stats = channel_stats(products)
+    deep_payload = {
+        **base,
+        "channel_matrix": channel_matrix(products),
+        "channel_stats": [c.model_dump() for c in ch_stats],
+        "promo_type_counts": promo_type_counts(products),
+        "spec_frequency": spec_frequency(products),
+        "consumer_signals": usage_corpus(products, state.get("page_insights", [])),
+    }
+
+    async def main_call() -> AnalysisReport:
+        return await deps.llm.chat_json(
+            [
+                {"role": "system", "content": prompts.ANALYST.format(lang=lang)},
+                {"role": "user", "content": json.dumps(main_payload, ensure_ascii=False)},
+            ],
+            AnalysisReport,
+            max_tokens=8000,
+            think=deps.settings.vllm_enable_thinking,
+        )
+
+    async def deep_call() -> DeepAnalysis | None:
+        try:
+            return await deps.llm.chat_json(
+                [
+                    {"role": "system", "content": prompts.DEEP_ANALYST.format(lang=lang)},
+                    {"role": "user", "content": json.dumps(deep_payload, ensure_ascii=False)},
+                ],
+                DeepAnalysis,
+                max_tokens=8000,
+            )
+        except Exception as e:  # the core report must still ship without the deep dive
+            log.exception("deep analysis failed")
+            return e  # type: ignore[return-value]
+
+    analysis, deep = await asyncio.gather(main_call(), deep_call())
+    errors: list[str] = []
+    if isinstance(deep, DeepAnalysis):
+        deep.channel_analysis.matrix = deep_payload["channel_matrix"]
+        deep.channel_analysis.stats = ch_stats
+        deep.promotion_analysis.promo_type_counts = deep_payload["promo_type_counts"]
+        analysis.channel_analysis = deep.channel_analysis
+        analysis.usage_insights = deep.usage_insights
+        analysis.promotion_analysis = deep.promotion_analysis
+        analysis.feature_comparison = deep.feature_comparison
+    elif deep is not None:
+        errors.append(f"deep analysis: {deep}")
     ev = await _emit(
-        deps, "analyze", f"{len(analysis.competitors)} competitors assessed · confidence={analysis.confidence}"
+        deps,
+        "analyze",
+        f"{len(analysis.competitors)} competitors · {len(ch_stats)} channels · confidence={analysis.confidence}"
+        + ("" if isinstance(deep, DeepAnalysis) else " · deep-dive skipped"),
     )
-    return {"analysis": analysis, "price_stats": stats, "events": [ev]}
+    return {"analysis": analysis, "price_stats": stats, "events": [ev], "errors": errors}
 
 
 async def write_node(state: ResearchState, config: RunnableConfig) -> dict:
@@ -344,10 +414,45 @@ async def write_node(state: ResearchState, config: RunnableConfig) -> dict:
         except Exception as e:
             log.exception("pdf failed")
             errors.append(f"pdf: {e}")
+    if OutputFormat.pptx in req.output_formats:
+        try:
+            pptx_path = await asyncio.to_thread(
+                render_pptx,
+                request=req,
+                analysis=analysis,
+                products=products,
+                stats=state.get("price_stats"),
+                images=images,
+                report_dir=out_dir,
+                out_path=out_dir / f"{stem}.pptx",
+            )
+            artifacts.append(
+                ReportArtifact(format=OutputFormat.pptx, path=str(pptx_path), size_bytes=pptx_path.stat().st_size)
+            )
+        except Exception as e:
+            log.exception("pptx failed")
+            errors.append(f"pptx: {e}")
+    if OutputFormat.xlsx in req.output_formats:
+        try:
+            xlsx_path = await asyncio.to_thread(
+                render_xlsx,
+                request=req,
+                analysis=analysis,
+                products=products,
+                stats=state.get("price_stats"),
+                pages=state["pages"],
+                out_path=out_dir / f"{stem}.xlsx",
+            )
+            artifacts.append(
+                ReportArtifact(format=OutputFormat.xlsx, path=str(xlsx_path), size_bytes=xlsx_path.stat().st_size)
+            )
+        except Exception as e:
+            log.exception("xlsx failed")
+            errors.append(f"xlsx: {e}")
     ev = await _emit(
         deps,
         "write",
-        ", ".join(f"{a.format}={a.path}" for a in artifacts) + f" · {len(charts)} charts · {len(images)} images",
+        ", ".join(a.format.value for a in artifacts) + f" · {len(charts)} charts · {len(images)} images",
     )
     return {"report_markdown": md, "artifacts": artifacts, "images": images, "events": [ev], "errors": errors}
 

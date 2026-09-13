@@ -11,15 +11,23 @@ from app.config import Settings
 from app.schemas.research import (
     SWOT,
     AnalysisReport,
+    ChannelAnalysis,
+    ChannelAssessment,
     CompetitorAssessment,
     CompetitorInfo,
+    DeepAnalysis,
     ExtractedProduct,
+    FeatureComparison,
+    FeatureRow,
     PageExtraction,
     Price,
+    PromotionAnalysis,
     ResearchPlan,
     SalesChannel,
     ScrapedPage,
     SearchResult,
+    TargetSegment,
+    UsageInsights,
 )
 
 T = TypeVar("T", bound=BaseModel)
@@ -94,6 +102,44 @@ class FakeLLM:
                 swot=SWOT(strengths=["s"]),
                 recommendations=["r"],
                 action_plan=["a"],
+            )
+        if schema is DeepAnalysis:
+            assert "channel_matrix" in user and "consumer_signals" in user
+            return DeepAnalysis(
+                channel_analysis=ChannelAnalysis(
+                    summary="ch",
+                    channel_mix_recommendation=["Shopee first"],
+                    channels=[
+                        ChannelAssessment(
+                            channel_name="Shopee",
+                            role="volume",
+                            strengths=["s"],
+                            watchouts=["w"],
+                            fit_for_us="high",
+                            recommendation="go",
+                        )
+                    ],
+                ),
+                usage_insights=UsageInsights(
+                    summary="u",
+                    use_cases=["daily"],
+                    purchase_drivers=["price"],
+                    pain_points=["sticky"],
+                    target_segments=[
+                        TargetSegment(
+                            segment="oily skin", needs=["light"], brands_serving=["BrandA"], opportunity="gel"
+                        )
+                    ],
+                    evidence=["ชอบมาก"],
+                ),
+                promotion_analysis=PromotionAnalysis(
+                    summary="p", brand_tactics=["BrandA: bundle"], recommendations=["launch coupon"]
+                ),
+                feature_comparison=FeatureComparison(
+                    summary="f",
+                    features=[FeatureRow(feature="SPF50", brands_offering=["BrandA"], is_table_stakes=True)],
+                    differentiation_opportunities=["PA++++"],
+                ),
             )
         raise AssertionError(f"unexpected schema {schema}")
 

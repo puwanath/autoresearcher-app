@@ -20,7 +20,14 @@ async def test_full_loop_without_refine(settings):
     assert {p.brand_name for p in result.products} == {"BrandA"}
     assert result.price_stats.sample_size == 8
     assert result.analysis.title == "Report"
-    assert "## บทสรุปผู้บริหาร" in result.report_markdown and "| BrandA |" in result.report_markdown
+    assert result.analysis.channel_analysis and result.analysis.channel_analysis.matrix[0]["brand"] == "BrandA"
+    assert result.analysis.channel_analysis.stats[0].channel_name == "Shopee"
+    assert result.analysis.usage_insights.target_segments[0].segment == "oily skin"
+    assert not result.errors, result.errors
+    md = result.report_markdown
+    assert "## บทสรุปผู้บริหาร" in md and "| BrandA |" in md
+    assert "Matrix แบรนด์ × ช่องทาง" in md and "ส่วนที่ 4: พฤติกรรมและการใช้งาน" in md
+    assert "ส่วนที่ 5: ข้อเสนอแนะ" in md and "เปรียบเทียบคุณสมบัติ" in md
     assert len(result.artifacts) == 1 and result.artifacts[0].path.endswith(".md")
     assert any(e.split("] ")[1].startswith("analyze") for e in result.events)
 
@@ -77,3 +84,40 @@ async def test_pdf_artifact(settings):
     assert formats == {OutputFormat.markdown, OutputFormat.pdf}
     pdf = next(a for a in result.artifacts if a.format == OutputFormat.pdf)
     assert open(pdf.path, "rb").read(5) == b"%PDF-"
+
+
+@pytest.mark.asyncio
+async def test_pptx_and_xlsx_artifacts(settings):
+    deps = Deps(llm=FakeLLM(), settings=settings, search=fake_search, fetch=fake_fetch, fetch_images=False)
+    req = ResearchRequest(query="กาแฟดริป", output_formats=[OutputFormat.pptx, OutputFormat.xlsx])
+    result = await run_research(req, "t5", deps)
+    paths = {a.format: a.path for a in result.artifacts}
+    assert set(paths) == {OutputFormat.markdown, OutputFormat.pptx, OutputFormat.xlsx}
+
+    from pptx import Presentation
+
+    prs = Presentation(paths[OutputFormat.pptx])
+    titles = [sh.text_frame.text for s in prs.slides for sh in s.shapes if sh.has_text_frame]
+    assert len(prs.slides) >= 9
+    assert any("บทสรุปผู้บริหาร" in t for t in titles) and any("SWOT" in t for t in titles)
+    assert any("พฤติกรรมและการใช้งาน" in t for t in titles)
+    assert any(sh.has_chart for s in prs.slides for sh in s.shapes)  # native, editable chart
+
+    from openpyxl import load_workbook
+
+    wb = load_workbook(paths[OutputFormat.xlsx])
+    expected = {
+        "Summary",
+        "Competitors",
+        "BrandSummary",
+        "Prices",
+        "ChannelMatrix",
+        "Channels",
+        "UsageInsights",
+        "Strategy",
+    }
+    assert expected | {"Sources"} <= set(wb.sheetnames)
+    prices = wb["Prices"]
+    assert prices.max_row == 1 + len(result.products)
+    assert prices.cell(2, 15).hyperlink is not None  # source link
+    assert wb["Summary"]["B10"].value.startswith("=IFERROR(AVERAGE(")

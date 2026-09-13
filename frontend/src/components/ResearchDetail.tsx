@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, type TaskView } from "@/lib/api";
+import { api, FORMAT_LABEL, type OutputFormat, type TaskView } from "@/lib/api";
 import { duration, parseEvent, thb } from "@/lib/format";
 import { Bullets, CompetitorTable, ImageGallery, ProductTable, Prose, Section, SwotGrid } from "./AnalysisSections";
+import { ChannelSection, PromoFeatureSection, UsageSection } from "./DeepSections";
 import { PriceChart } from "./PriceChart";
 import { ProgressSteps } from "./ProgressSteps";
 import { StatTile } from "./StatTile";
@@ -101,12 +102,11 @@ export function ResearchDetail({ id }: { id: string }) {
                 {retrying ? "กำลังส่ง…" : "รันอีกครั้ง"}
               </button>
             )}
-            {task.artifacts.pdf && (
-              <a href={api.reportUrl(id, "pdf")} className="btn-primary">ดาวน์โหลด PDF</a>
-            )}
-            {task.artifacts.md && (
-              <a href={api.reportUrl(id, "md")} className="btn-secondary">Markdown</a>
-            )}
+            {(["pdf", "pptx", "xlsx", "md"] as OutputFormat[]).filter((f) => task.artifacts[f]).map((f, i) => (
+              <a key={f} href={api.reportUrl(id, f)} className={i === 0 ? "btn-primary" : "btn-secondary"}>
+                {i === 0 ? `ดาวน์โหลด ${FORMAT_LABEL[f]}` : FORMAT_LABEL[f]}
+              </a>
+            ))}
           </div>
         </div>
       </div>
@@ -170,24 +170,37 @@ export function ResearchDetail({ id }: { id: string }) {
           </Section>
 
           <Section eyebrow="Price & Promotion" title="วิเคราะห์ราคาและโปรโมชั่น">
-            <div className="card p-7">
-              <Prose text={a.pricing_insight} />
+            <div className="space-y-4">
+              <div className="card p-7">
+                <Prose text={a.pricing_insight} />
+              </div>
+              {(a.promotion_analysis || a.feature_comparison) && <PromoFeatureSection pa={a.promotion_analysis} fc={a.feature_comparison} />}
             </div>
           </Section>
 
-          <Section eyebrow="Sales Channel" title="ช่องทางการขาย">
-            <div className="card p-7">
-              <Prose text={a.channel_insight} />
-              <div className="mt-4 flex flex-wrap gap-2">
-                {a.recommended_channels.map((c) => (
-                  <span key={c} className="rounded-full bg-ink px-3 py-1 text-[13px] font-medium text-white">{c}</span>
-                ))}
+          <Section eyebrow="Distribution Channels" title="ช่องทางการจัดจำหน่าย">
+            {a.channel_analysis ? (
+              <ChannelSection ca={a.channel_analysis} targets={targets} />
+            ) : (
+              <div className="card p-7">
+                <Prose text={a.channel_insight} />
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {a.recommended_channels.map((c) => (
+                    <span key={c} className="rounded-full bg-ink px-3 py-1 text-[13px] font-medium text-white">{c}</span>
+                  ))}
+                </div>
               </div>
-              <p className="mt-5 border-t border-line-2 pt-4 text-[14px] leading-relaxed text-ink-2">
-                <span className="font-semibold text-ink">ความรู้สึกของลูกค้า: </span>{a.sentiment_summary}
-              </p>
-            </div>
+            )}
+            <p className="card mt-4 p-6 text-[14px] leading-relaxed text-ink-2">
+              <span className="font-semibold text-ink">ความรู้สึกของลูกค้า: </span>{a.sentiment_summary}
+            </p>
           </Section>
+
+          {a.usage_insights && (
+            <Section eyebrow="Usage & Consumer Insights" title="พฤติกรรมและการใช้งานของผู้บริโภค">
+              <UsageSection u={a.usage_insights} />
+            </Section>
+          )}
 
           <Section eyebrow="Strategy" title="ข้อเสนอแนะเชิงกลยุทธ์">
             <div className="space-y-4">
