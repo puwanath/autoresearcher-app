@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: autoresearch
+      POSTGRES_PASSWORD: autoresearch
+      POSTGRES_DB: autoresearch
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autoresearch"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6380:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    image: autoresearch:latest
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://autoresearch:autoresearch@postgres:5432/autoresearch
+      REDIS_URL: redis://redis:6379/0
+      DATA_DIR: /data
+    ports: ["8010:8000"]
+    volumes: [./data:/data]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  worker:
+    image: autoresearch:latest
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2 --pool=prefork
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://autoresearch:autoresearch@postgres:5432/autoresearch
+      REDIS_URL: redis://redis:6379/0
+      DATA_DIR: /data
+    volumes: [./data:/data]
+    depends_on:
+      api: { condition: service_started }
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+volumes:
+  pgdata:

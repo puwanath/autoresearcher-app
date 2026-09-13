@@ -1,0 +1,29 @@
+# secrets / local config
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# runtime output (reports, raw HTML, screenshots)
+data/
+*.log
+
+# node (frontend, Phase 2+)
+node_modules/
+.next/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*:Zone.Identifier

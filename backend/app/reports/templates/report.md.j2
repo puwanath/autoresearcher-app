@@ -1,0 +1,96 @@
+# {{ a.title }}
+
+- **สรุปผลการวิจัยโดย AutoResearch Agent** — {{ generated_at }}
+- **หัวข้อวิจัย:** {{ req.query }}{% if req.target_competitors %} · **คู่แข่งเป้าหมาย:** {{ req.target_competitors | join(", ") }}{% endif %}{% if req.our_brand %} · **แบรนด์ของเรา:** {{ req.our_brand }}{% endif %}
+- **ความเชื่อมั่นของข้อมูล:** {{ a.confidence }} · **หน้าเว็บที่วิเคราะห์:** {{ pages_ok }}/{{ pages_total }} · **รายการสินค้า:** {{ products | length }}
+
+## บทสรุปผู้บริหาร (Executive Summary)
+
+{{ a.executive_summary }}
+
+**Key Findings**
+{% for k in a.key_findings %}
+- {{ k }}
+{%- endfor %}
+
+- **Price Benchmark:** {% if stats and stats.sample_size %}ต่ำสุด {{ stats.min | thb }} · มัธยฐาน {{ stats.median | thb }} · สูงสุด {{ stats.max | thb }} ({{ stats.sample_size }} รายการ){% else %}ไม่พบข้อมูลราคาที่เพียงพอ{% endif %}
+- **Recommendation:** ช่วงราคาที่แนะนำ {{ a.recommended_price_range_thb }} · ช่องทางที่แนะนำ {{ a.recommended_channels | join(", ") }}
+
+## ส่วนที่ 1: ภาพรวมคู่แข่ง (Competitor Landscape)
+
+{{ a.market_overview }}
+
+**ลักษณะการแข่งขัน:** {{ a.competition_type }}
+
+| แบรนด์ | ตำแหน่งราคา | ช่วงราคา | จุดเด่น | จุดด้อย | ช่องทาง | Sentiment |
+|---|---|---|---|---|---|---|
+{% for c in a.competitors -%}
+| **{{ c.brand_name }}** | {{ c.price_position }} | {{ c.price_range_thb }} | {{ c.strengths | join("; ") }} | {{ c.weaknesses | join("; ") }} | {{ c.channels | join(", ") }} | {{ c.sentiment }} |
+{% endfor %}
+
+## ส่วนที่ 2: วิเคราะห์ราคาและโปรโมชั่น (Price & Promotion Analysis)
+
+{{ a.pricing_insight }}
+
+**สรุปราคาตามแบรนด์**
+
+| แบรนด์ | จำนวนสินค้า | ราคาต่ำสุด | ราคามัธยฐาน | ราคาสูงสุด | โปรโมชั่น | คะแนนรีวิวเฉลี่ย |
+|---|---:|---:|---:|---:|---|---:|
+{% for r in brand_rows -%}
+| {{ r.brand }} | {{ r.products }} | {{ r.min_price | thb }} | {{ r.median_price | thb }} | {{ r.max_price | thb }} | {{ r.promotions | join(", ") or "-" }} | {{ r.avg_rating if r.avg_rating else "-" }} |
+{% endfor %}
+
+**รายละเอียดสินค้าที่พบ (สูงสุด {{ max_rows }} รายการ)**
+
+| สินค้า | แบรนด์ | Variant | ราคา | ราคาเดิม | ส่วนลด | ช่องทาง | แหล่งข้อมูล |
+|---|---|---|---:|---:|---:|---|---|
+{% for p in products[:max_rows] -%}
+| {{ p.product_name | trunc(60) }} | {{ p.brand_name or "-" }} | {{ p.variant or "-" }} | {{ p.price.amount | thb(p.price.currency) }} | {{ p.price.original_price | thb(p.price.currency) }} | {{ (p.price.discount_percentage ~ "%") if p.price.discount_percentage else "-" }} | {{ p.sales_channels | map(attribute="channel_name") | join(", ") or "-" }} | [link]({{ p.data_source_url }}) |
+{% endfor %}
+
+## ส่วนที่ 3: ช่องทางการขาย (Sales Channel Strategy)
+
+{{ a.channel_insight }}
+
+| ช่องทาง | จำนวนรายการที่พบ |
+|---|---:|
+{% for ch, n in channel_counts -%}
+| {{ ch }} | {{ n }} |
+{% endfor %}
+
+**ความรู้สึกของลูกค้า (Sentiment):** {{ a.sentiment_summary }}
+
+## ส่วนที่ 4: ข้อเสนอแนะเชิงกลยุทธ์ (Strategic Recommendations)
+
+### SWOT Analysis
+
+| Strengths | Weaknesses |
+|---|---|
+| {{ a.swot.strengths | join("<br>") }} | {{ a.swot.weaknesses | join("<br>") }} |
+
+| Opportunities | Threats |
+|---|---|
+| {{ a.swot.opportunities | join("<br>") }} | {{ a.swot.threats | join("<br>") }} |
+
+### ข้อเสนอแนะ
+{% for r in a.recommendations %}
+{{ loop.index }}. {{ r }}
+{%- endfor %}
+
+### Action Plan
+{% for r in a.action_plan %}
+- [ ] {{ r }}
+{%- endfor %}
+{% if a.data_gaps %}
+### ข้อจำกัดของข้อมูล
+{% for g in a.data_gaps %}
+- {{ g }}
+{%- endfor %}
+{% endif %}
+
+---
+
+### แหล่งข้อมูลที่ใช้
+{% for p in sources %}
+- [{{ p.title or p.final_url | trunc(80) }}]({{ p.final_url }})
+{%- endfor %}
